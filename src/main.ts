@@ -14,6 +14,7 @@ import { Worker } from "./units/Worker";
 import { Resources } from "./game/Resources";
 import { Hud } from "./ui/Hud";
 import { PlacementController } from "./systems/PlacementController";
+import { TrainingController } from "./systems/TrainingController";
 import { Building } from "./buildings/Building";
 import { BUILDING_TYPES } from "./buildings/buildingTypes";
 
@@ -54,12 +55,31 @@ const placement = new PlacementController(
 );
 selection.placement = placement;
 
+const training = new TrainingController(
+  scene,
+  resources,
+  workers,
+  new Vector3(3, 0.7, 5) // spawn point in front of the Site Office
+);
+
+let won = false;
+function checkWin(): void {
+  if (won) return;
+  if (buildings.some((b) => b.isComplete && b.type.goal)) {
+    won = true;
+    const v = document.getElementById("victory");
+    if (v) v.style.display = "flex";
+  }
+}
+
 engine.runRenderLoop(() => {
   const dt = engine.getDeltaTime() / 1000;
   resources.add("funding", resources.fundingPerSecond * dt);
   rts.update(dt);
   for (const w of workers) w.update(dt);
+  training.update(dt);
   hud.update();
+  checkWin();
   scene.render();
 });
 
@@ -74,6 +94,9 @@ window.addEventListener("resize", () => engine.resize());
   resources,
   env,
   buildings,
+  training,
+  checkWin,
+  isWon: () => won,
   moveWorker: (i: number, x: number, z: number) =>
     workers[i]?.moveTo(new Vector3(x, workers[i].mesh.position.y, z)),
   gatherWorker: (i: number) =>

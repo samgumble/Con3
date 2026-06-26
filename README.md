@@ -5,9 +5,12 @@ theme. Gather resources (funding, materials, labor) and build out a full campus/
 **Web-native** (TypeScript + Babylon.js + Vite) — runs in the browser, hosted on
 GitHub Pages, designed for online play.
 
-> **Status:** M1 in progress — runnable Babylon.js scene with an RTS camera, a site
-> office, workers, and a material pile. See [DESIGN.md](DESIGN.md) for the roadmap and
-> [docs/AI-ASSETS.md](docs/AI-ASSETS.md) for the AI art/model pipeline.
+> **Status:** M4 complete — playable single-player build race. Gather materials, train
+> workers, construct buildings (Trailer, Generator), and win by building the HQ Tower.
+> See [DESIGN.md](DESIGN.md) for the roadmap and [docs/AI-ASSETS.md](docs/AI-ASSETS.md)
+> for the AI art/model pipeline.
+>
+> Next: M5 (AI opponent), M6 (online multiplayer), M7 (AI-generated assets).
 
 ## Getting started
 

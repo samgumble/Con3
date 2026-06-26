@@ -13,6 +13,8 @@ export interface BuildingType {
   color: Color3;
   /** Effect applied once construction completes. */
   apply: (r: Resources) => void;
+  /** If true, completing this building wins the game. */
+  goal?: boolean;
 }
 
 export const BUILDING_TYPES: BuildingType[] = [
@@ -39,6 +41,17 @@ export const BUILDING_TYPES: BuildingType[] = [
     apply: (r) => {
       r.fundingPerSecond += 2;
     },
+  },
+  {
+    id: "hq",
+    name: "HQ Tower",
+    blurb: "Win the game!",
+    cost: { materials: 200, funding: 300 },
+    buildTime: 18,
+    size: { w: 5, d: 5, h: 7 },
+    color: new Color3(0.9, 0.78, 0.25),
+    apply: () => {},
+    goal: true,
   },
 ];
 

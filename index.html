@@ -15,7 +15,7 @@
       }
       #hud b { color: #ffe27a; }
       #resources {
-        position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+        position: fixed; top: 12px; left: 12px;
         white-space: nowrap;
         font: 14px/1.5 system-ui, sans-serif; color: #fff;
         background: rgba(0, 0, 0, 0.55); padding: 8px 14px; border-radius: 6px;
@@ -37,12 +37,40 @@
       .buildbtn b { font-size: 14px; }
       .buildbtn span { color: #9fe09f; }
       .buildbtn small { color: #cdbf8a; }
+      #trainmenu {
+        position: fixed; top: 12px; right: 12px;
+        display: flex; gap: 8px;
+      }
+      #victory {
+        position: fixed; inset: 0; display: none; z-index: 10;
+        align-items: center; justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+      }
+      #victory .card {
+        background: #1a2230; color: #fff; text-align: center;
+        padding: 28px 36px; border-radius: 12px; border: 1px solid #ffe27a;
+        font-family: system-ui, sans-serif;
+      }
+      #victory h1 { margin: 0 0 8px; color: #ffe27a; }
+      #victory button {
+        margin-top: 14px; cursor: pointer; font: bold 14px system-ui, sans-serif;
+        background: #ffe27a; color: #1a2230; border: none;
+        padding: 8px 18px; border-radius: 6px;
+      }
     </style>
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
     <div id="resources"></div>
     <div id="buildmenu"></div>
+    <div id="trainmenu"></div>
+    <div id="victory">
+      <div class="card">
+        <h1>&#127942; Site Complete!</h1>
+        <p>You finished the HQ Tower. Your campus is built.</p>
+        <button onclick="location.reload()">Play again</button>
+      </div>
+    </div>
     <div id="hud">
       <div><b>Left-click</b> select worker &nbsp; <b>Right-click pile</b> gather &nbsp; <b>Right-click ground</b> move</div>
       <div><b>WASD / arrows / screen edge</b> pan &nbsp; <b>Wheel</b> zoom</div>
