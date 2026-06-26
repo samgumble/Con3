@@ -6,17 +6,40 @@ import {
   Color3,
   Vector3,
 } from "@babylonjs/core";
+import { Resources } from "../game/Resources";
+
+type GatherPhase = "toNode" | "harvest" | "toDrop";
+
+interface GatherTask {
+  nodePos: Vector3;
+  dropPos: Vector3;
+  phase: GatherPhase;
+  timer: number;
+}
+
+const NODE_STOP = 1.6; // stop this far from the resource node
+const DROP_STOP = 3.0; // stop this far from the (larger) drop-off building
 
 /**
- * A worker (laborer). For M1 it just moves smoothly to a commanded point.
- * Later milestones add gathering, building, and carrying state.
+ * A worker (laborer). Supports a manual move command and an auto-repeating
+ * gather loop: walk to node -> harvest -> carry to drop-off -> deposit -> repeat.
  */
 export class Worker {
   readonly mesh: Mesh;
   speed = 6; // world units / second
-  private destination: Vector3 | null = null;
+  harvestTime = 1.3; // seconds to fill up at a node
+  carryAmount = 10; // materials carried per trip
 
-  constructor(scene: Scene, position: Vector3) {
+  private moveDest: Vector3 | null = null;
+  private gather: GatherTask | null = null;
+  private carrying = 0;
+  private carryIndicator: Mesh;
+
+  constructor(
+    scene: Scene,
+    position: Vector3,
+    private resources: Resources
+  ) {
     this.mesh = MeshBuilder.CreateCapsule(
       "worker",
       { radius: 0.4, height: 1.4 },
@@ -27,39 +50,91 @@ export class Worker {
     const mat = new StandardMaterial("workerMat", scene);
     mat.diffuseColor = new Color3(0.2, 0.5, 0.9);
     this.mesh.material = mat;
-
-    // Tag the mesh so picking can resolve it back to this Worker.
     this.mesh.metadata = { worker: this };
+
+    // Small cargo block shown above the worker while carrying materials.
+    this.carryIndicator = MeshBuilder.CreateBox("cargo", { size: 0.4 }, scene);
+    this.carryIndicator.parent = this.mesh;
+    this.carryIndicator.position.set(0, 1.1, 0);
+    const cargoMat = new StandardMaterial("cargoMat", scene);
+    cargoMat.diffuseColor = new Color3(0.6, 0.6, 0.6);
+    this.carryIndicator.material = cargoMat;
+    this.carryIndicator.setEnabled(false);
   }
 
-  /** Command the worker to walk to a point on the ground. */
+  /** Manual move command. Cancels any active gather loop. */
   moveTo(point: Vector3): void {
-    this.destination = new Vector3(point.x, this.mesh.position.y, point.z);
+    this.gather = null;
+    this.moveDest = new Vector3(point.x, this.mesh.position.y, point.z);
+  }
+
+  /** Start (or resume) auto-gathering between a node and a drop-off. */
+  assignGather(nodePos: Vector3, dropPos: Vector3): void {
+    this.moveDest = null;
+    this.gather = {
+      nodePos: nodePos.clone(),
+      dropPos: dropPos.clone(),
+      phase: this.carrying > 0 ? "toDrop" : "toNode",
+      timer: 0,
+    };
   }
 
   get isMoving(): boolean {
-    return this.destination !== null;
+    return this.moveDest !== null || this.gather !== null;
   }
 
-  /** Advance movement. dt is in seconds. */
   update(dt: number): void {
-    if (!this.destination) return;
-
-    const pos = this.mesh.position;
-    const toDest = this.destination.subtract(pos);
-    toDest.y = 0;
-    const dist = toDest.length();
-
-    if (dist < 0.05) {
-      this.destination = null;
-      return;
+    if (this.moveDest) {
+      if (this.stepToward(this.moveDest, dt)) this.moveDest = null;
+    } else if (this.gather) {
+      this.updateGather(this.gather, dt);
     }
+  }
 
-    const dir = toDest.normalize();
-    const step = Math.min(this.speed * dt, dist);
+  private updateGather(g: GatherTask, dt: number): void {
+    switch (g.phase) {
+      case "toNode":
+        if (this.stepToward(g.nodePos, dt, NODE_STOP)) {
+          g.phase = "harvest";
+          g.timer = 0;
+        }
+        break;
+      case "harvest":
+        g.timer += dt;
+        if (g.timer >= this.harvestTime) {
+          this.setCarrying(this.carryAmount);
+          g.phase = "toDrop";
+        }
+        break;
+      case "toDrop":
+        if (this.stepToward(g.dropPos, dt, DROP_STOP)) {
+          this.resources.add("materials", this.carrying);
+          this.setCarrying(0);
+          g.phase = "toNode";
+        }
+        break;
+    }
+  }
+
+  /** Move toward target; returns true once within stopDist (+ tolerance). */
+  private stepToward(target: Vector3, dt: number, stopDist = 0.05): boolean {
+    const pos = this.mesh.position;
+    const to = target.subtract(pos);
+    to.y = 0;
+    // Distance still to travel before reaching the stop band. Using a small
+    // tolerance avoids asymptotically creeping toward the boundary forever.
+    const remaining = to.length() - stopDist;
+    if (remaining <= 0.02) return true;
+
+    const dir = to.normalize();
+    const step = Math.min(this.speed * dt, remaining);
     pos.addInPlace(dir.scale(step));
-
-    // Face the direction of travel.
     this.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+    return false;
+  }
+
+  private setCarrying(amount: number): void {
+    this.carrying = amount;
+    this.carryIndicator.setEnabled(amount > 0);
   }
 }

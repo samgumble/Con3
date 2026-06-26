@@ -3,13 +3,15 @@ import {
   PointerEventTypes,
   HighlightLayer,
   Color3,
-  AbstractMesh,
 } from "@babylonjs/core";
 import { Worker } from "../units/Worker";
+import { Environment } from "../environment";
 
 /**
- * Left-click selects a worker (or deselects when clicking empty ground).
- * Right-click commands the selected worker to move to the clicked ground point.
+ * Left-click selects a worker (or deselects on empty ground).
+ * Right-click issues a context command for the selected worker:
+ *   - on the material pile  -> start the gather loop
+ *   - on the ground         -> move there
  */
 export class SelectionController {
   selected: Worker | null = null;
@@ -17,10 +19,9 @@ export class SelectionController {
   constructor(
     private scene: Scene,
     private workers: Worker[],
-    private ground: AbstractMesh,
+    private env: Environment,
     private highlight: HighlightLayer
   ) {
-    // Suppress the browser context menu so right-click is usable as a command.
     scene
       .getEngine()
       .getRenderingCanvas()
@@ -29,12 +30,8 @@ export class SelectionController {
     scene.onPointerObservable.add((pi) => {
       if (pi.type !== PointerEventTypes.POINTERDOWN) return;
       const button = (pi.event as PointerEvent).button;
-
-      if (button === 0) {
-        this.handleSelect();
-      } else if (button === 2) {
-        this.handleMoveCommand();
-      }
+      if (button === 0) this.handleSelect();
+      else if (button === 2) this.handleCommand();
     });
   }
 
@@ -45,22 +42,32 @@ export class SelectionController {
       (m) => !!m.metadata?.worker
     );
     const worker = pick?.pickedMesh?.metadata?.worker as Worker | undefined;
-    if (worker) {
-      this.select(worker);
-    } else {
-      this.deselect();
-    }
+    if (worker) this.select(worker);
+    else this.deselect();
   }
 
-  private handleMoveCommand(): void {
+  private handleCommand(): void {
     if (!this.selected) return;
-    const pick = this.scene.pick(
+
+    // Did we right-click the material pile? -> gather.
+    const nodePick = this.scene.pick(
       this.scene.pointerX,
       this.scene.pointerY,
-      (m) => m === this.ground
+      (m) => m === this.env.pile
     );
-    if (pick?.hit && pick.pickedPoint) {
-      this.selected.moveTo(pick.pickedPoint);
+    if (nodePick?.hit) {
+      this.selected.assignGather(this.env.pile.position, this.env.office.position);
+      return;
+    }
+
+    // Otherwise move to the ground point.
+    const groundPick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (m) => m === this.env.ground
+    );
+    if (groundPick?.hit && groundPick.pickedPoint) {
+      this.selected.moveTo(groundPick.pickedPoint);
     }
   }
 
