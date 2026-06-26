@@ -13,6 +13,9 @@ import { buildEnvironment } from "./environment";
 import { Worker } from "./units/Worker";
 import { Resources } from "./game/Resources";
 import { Hud } from "./ui/Hud";
+import { PlacementController } from "./systems/PlacementController";
+import { Building } from "./buildings/Building";
+import { BUILDING_TYPES } from "./buildings/buildingTypes";
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
@@ -29,7 +32,6 @@ const rts = new RtsCamera(scene, canvas);
 const env = buildEnvironment(scene);
 
 const resources = new Resources();
-const FUNDING_PER_SECOND = 3; // Site Office trickles funding
 
 const workers: Worker[] = [];
 for (let i = 0; i < 3; i++) {
@@ -41,9 +43,20 @@ const highlight = new HighlightLayer("highlight", scene);
 const selection = new SelectionController(scene, workers, env, highlight);
 const hud = new Hud(resources);
 
+const buildings: Building[] = [];
+const placement = new PlacementController(
+  scene,
+  env.ground,
+  resources,
+  workers,
+  selection,
+  (b) => buildings.push(b)
+);
+selection.placement = placement;
+
 engine.runRenderLoop(() => {
   const dt = engine.getDeltaTime() / 1000;
-  resources.add("funding", FUNDING_PER_SECOND * dt);
+  resources.add("funding", resources.fundingPerSecond * dt);
   rts.update(dt);
   for (const w of workers) w.update(dt);
   hud.update();
@@ -60,9 +73,18 @@ window.addEventListener("resize", () => engine.resize());
   selection,
   resources,
   env,
+  buildings,
   moveWorker: (i: number, x: number, z: number) =>
     workers[i]?.moveTo(new Vector3(x, workers[i].mesh.position.y, z)),
   gatherWorker: (i: number) =>
     workers[i]?.assignGather(env.pile.position, env.office.position),
+  testBuild: (id: string, x: number, z: number) => {
+    const t = BUILDING_TYPES.find((b) => b.id === id);
+    if (!t) return "unknown type";
+    const b = new Building(scene, t, new Vector3(x, 0, z), resources);
+    buildings.push(b);
+    workers[0]?.assignBuild(b);
+    return `placed ${id}`;
+  },
   pos: (i: number) => workers[i]?.mesh.position.asArray(),
 };

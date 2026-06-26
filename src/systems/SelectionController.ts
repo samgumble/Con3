@@ -6,6 +6,7 @@ import {
 } from "@babylonjs/core";
 import { Worker } from "../units/Worker";
 import { Environment } from "../environment";
+import { Building } from "../buildings/Building";
 
 /**
  * Left-click selects a worker (or deselects on empty ground).
@@ -15,6 +16,8 @@ import { Environment } from "../environment";
  */
 export class SelectionController {
   selected: Worker | null = null;
+  /** Set after construction; clicks are ignored while a building is being placed. */
+  placement: { isPlacing: boolean } | null = null;
 
   constructor(
     private scene: Scene,
@@ -29,6 +32,7 @@ export class SelectionController {
 
     scene.onPointerObservable.add((pi) => {
       if (pi.type !== PointerEventTypes.POINTERDOWN) return;
+      if (this.placement?.isPlacing) return; // placement owns the click
       const button = (pi.event as PointerEvent).button;
       if (button === 0) this.handleSelect();
       else if (button === 2) this.handleCommand();
@@ -48,6 +52,20 @@ export class SelectionController {
 
   private handleCommand(): void {
     if (!this.selected) return;
+
+    // Did we right-click an unfinished building? -> help construct it.
+    const buildPick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (m) => !!m.metadata?.building
+    );
+    const building = buildPick?.pickedMesh?.metadata?.building as
+      | Building
+      | undefined;
+    if (building && !building.isComplete) {
+      this.selected.assignBuild(building);
+      return;
+    }
 
     // Did we right-click the material pile? -> gather.
     const nodePick = this.scene.pick(

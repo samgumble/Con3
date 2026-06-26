@@ -7,6 +7,7 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { Resources } from "../game/Resources";
+import type { Building } from "../buildings/Building";
 
 type GatherPhase = "toNode" | "harvest" | "toDrop";
 
@@ -19,10 +20,11 @@ interface GatherTask {
 
 const NODE_STOP = 1.6; // stop this far from the resource node
 const DROP_STOP = 3.0; // stop this far from the (larger) drop-off building
+const BUILD_STOP = 2.6; // stop this far from a construction site
 
 /**
- * A worker (laborer). Supports a manual move command and an auto-repeating
- * gather loop: walk to node -> harvest -> carry to drop-off -> deposit -> repeat.
+ * A worker (laborer). Supports a manual move, an auto-repeating gather loop, and
+ * a build task. Only one task is active at a time; issuing one cancels the rest.
  */
 export class Worker {
   readonly mesh: Mesh;
@@ -32,6 +34,7 @@ export class Worker {
 
   private moveDest: Vector3 | null = null;
   private gather: GatherTask | null = null;
+  private buildTask: { building: Building } | null = null;
   private carrying = 0;
   private carryIndicator: Mesh;
 
@@ -52,7 +55,6 @@ export class Worker {
     this.mesh.material = mat;
     this.mesh.metadata = { worker: this };
 
-    // Small cargo block shown above the worker while carrying materials.
     this.carryIndicator = MeshBuilder.CreateBox("cargo", { size: 0.4 }, scene);
     this.carryIndicator.parent = this.mesh;
     this.carryIndicator.position.set(0, 1.1, 0);
@@ -62,25 +64,38 @@ export class Worker {
     this.carryIndicator.setEnabled(false);
   }
 
-  /** Manual move command. Cancels any active gather loop. */
-  moveTo(point: Vector3): void {
+  private clearTasks(): void {
+    this.moveDest = null;
     this.gather = null;
+    this.buildTask = null;
+  }
+
+  /** Manual move command. */
+  moveTo(point: Vector3): void {
+    this.clearTasks();
     this.moveDest = new Vector3(point.x, this.mesh.position.y, point.z);
   }
 
   /** Start (or resume) auto-gathering between a node and a drop-off. */
   assignGather(nodePos: Vector3, dropPos: Vector3): void {
-    this.moveDest = null;
+    const wasCarrying = this.carrying > 0;
+    this.clearTasks();
     this.gather = {
       nodePos: nodePos.clone(),
       dropPos: dropPos.clone(),
-      phase: this.carrying > 0 ? "toDrop" : "toNode",
+      phase: wasCarrying ? "toDrop" : "toNode",
       timer: 0,
     };
   }
 
+  /** Assign this worker to construct a building. */
+  assignBuild(building: Building): void {
+    this.clearTasks();
+    this.buildTask = { building };
+  }
+
   get isMoving(): boolean {
-    return this.moveDest !== null || this.gather !== null;
+    return this.moveDest !== null || this.gather !== null || this.buildTask !== null;
   }
 
   update(dt: number): void {
@@ -88,6 +103,8 @@ export class Worker {
       if (this.stepToward(this.moveDest, dt)) this.moveDest = null;
     } else if (this.gather) {
       this.updateGather(this.gather, dt);
+    } else if (this.buildTask) {
+      this.updateBuild(this.buildTask.building, dt);
     }
   }
 
@@ -116,13 +133,23 @@ export class Worker {
     }
   }
 
+  private updateBuild(building: Building, dt: number): void {
+    if (building.isComplete) {
+      this.buildTask = null;
+      return;
+    }
+    // Walk to the site, then advance construction while standing there.
+    if (this.stepToward(building.position, dt, BUILD_STOP)) {
+      building.advance(dt);
+      if (building.isComplete) this.buildTask = null;
+    }
+  }
+
   /** Move toward target; returns true once within stopDist (+ tolerance). */
   private stepToward(target: Vector3, dt: number, stopDist = 0.05): boolean {
     const pos = this.mesh.position;
     const to = target.subtract(pos);
     to.y = 0;
-    // Distance still to travel before reaching the stop band. Using a small
-    // tolerance avoids asymptotically creeping toward the boundary forever.
     const remaining = to.length() - stopDist;
     if (remaining <= 0.02) return true;
 

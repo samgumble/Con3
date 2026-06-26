@@ -6,6 +6,7 @@ export class Resources {
   materials = 0;
   labor = 0;
   laborCap = 5;
+  fundingPerSecond = 3; // base income from the Site Office
 
   get(type: ResourceType): number {
     return this[type];
