@@ -26,10 +26,11 @@ const SHELL_H = 6.6;
  */
 export class HqTower implements Constructable {
   readonly type: BuildingType;
-  private phases: { name: string; buildTime: number }[];
+  private phases: { name: string; buildTime: number; materials?: number }[];
   private phaseIndex = 0;
   private phaseProgress = 0;
   private complete = false;
+  private stalled = false; // true when waiting on materials
 
   private pad: Mesh;
   private core: Mesh;
@@ -105,13 +106,37 @@ export class HqTower implements Constructable {
   get statusText(): string | null {
     if (this.complete) return null;
     const name = this.phases[this.phaseIndex]?.name ?? "";
-    return `HQ Tower — ${name} ${Math.floor(this.phaseProgress * 100)}%`;
+    const base = `HQ Tower — ${name} ${Math.floor(this.phaseProgress * 100)}%`;
+    return this.stalled ? `${base} · needs materials` : base;
   }
 
   advance(dt: number): void {
     if (this.complete) return;
     const phase = this.phases[this.phaseIndex];
-    this.phaseProgress = Math.min(1, this.phaseProgress + dt / phase.buildTime);
+    let inc = dt / phase.buildTime;
+
+    // Each phase consumes materials as it builds — stall if the pool runs dry.
+    const matCost = phase.materials ?? 0;
+    if (matCost > 0) {
+      const need = matCost * inc;
+      const have = this.resources.materials;
+      if (have <= 0) {
+        this.stalled = true;
+        this.updateVisual();
+        return;
+      }
+      this.stalled = false;
+      if (have < need) {
+        inc *= have / need; // partial progress with what's left
+        this.resources.materials = 0;
+      } else {
+        this.resources.materials -= need;
+      }
+    } else {
+      this.stalled = false;
+    }
+
+    this.phaseProgress = Math.min(1, this.phaseProgress + inc);
     this.updateVisual();
     if (this.phaseProgress >= 1) {
       this.phaseIndex += 1;
