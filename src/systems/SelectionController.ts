@@ -7,6 +7,7 @@ import {
 import { Worker } from "../units/Worker";
 import { Environment } from "../environment";
 import { Building } from "../buildings/Building";
+import { sfx } from "../audio/Sfx";
 
 /**
  * Left-click selects a worker (or deselects on empty ground).
@@ -93,6 +94,7 @@ export class SelectionController {
     this.deselect();
     this.selected = worker;
     this.highlight.addMesh(worker.mesh, Color3.Green());
+    sfx.play("select");
   }
 
   deselect(): void {

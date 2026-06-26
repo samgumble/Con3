@@ -1,6 +1,8 @@
 import { Scene, Vector3 } from "@babylonjs/core";
+import type { ShadowGenerator } from "@babylonjs/core";
 import { Resources } from "../game/Resources";
 import { Worker } from "../units/Worker";
+import { sfx } from "../audio/Sfx";
 
 /**
  * The Site Office's worker production: a button that spends Funding to queue a
@@ -18,7 +20,8 @@ export class TrainingController {
     private scene: Scene,
     private resources: Resources,
     private workers: Worker[],
-    private spawn: Vector3
+    private spawn: Vector3,
+    private shadows?: ShadowGenerator
   ) {
     const menu = document.getElementById("trainmenu");
     if (menu) {
@@ -31,11 +34,18 @@ export class TrainingController {
   }
 
   private tryTrain(): void {
-    if (this.resources.labor >= this.resources.laborCap) return; // at cap
-    if (this.resources.funding < this.cost) return; // can't afford
+    if (this.resources.labor >= this.resources.laborCap) {
+      sfx.play("deny");
+      return; // at cap
+    }
+    if (this.resources.funding < this.cost) {
+      sfx.play("deny");
+      return; // can't afford
+    }
     this.resources.funding -= this.cost;
     this.resources.labor += 1; // reserve population immediately
     this.queue += 1;
+    sfx.play("train");
   }
 
   update(dt: number): void {
@@ -46,7 +56,9 @@ export class TrainingController {
         this.queue -= 1;
         const jitter = (this.workers.length % 3) * 1.2;
         const pos = new Vector3(this.spawn.x + jitter, this.spawn.y, this.spawn.z);
-        this.workers.push(new Worker(this.scene, pos, this.resources));
+        this.workers.push(
+          new Worker(this.scene, pos, this.resources, this.shadows)
+        );
       }
     }
     this.refreshButton();

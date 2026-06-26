@@ -6,8 +6,10 @@ import {
   Color3,
   Vector3,
 } from "@babylonjs/core";
+import type { ShadowGenerator } from "@babylonjs/core";
 import { BuildingType } from "./buildingTypes";
 import { Resources } from "../game/Resources";
+import { sfx } from "../audio/Sfx";
 
 /**
  * A placed building. Starts as a translucent stub and grows/solidifies as a
@@ -24,7 +26,8 @@ export class Building {
     scene: Scene,
     type: BuildingType,
     position: Vector3,
-    private resources: Resources
+    private resources: Resources,
+    shadows?: ShadowGenerator
   ) {
     this.type = type;
     this.mesh = MeshBuilder.CreateBox(
@@ -38,6 +41,7 @@ export class Building {
     this.mat.diffuseColor = type.color.clone();
     this.mesh.material = this.mat;
     this.mesh.metadata = { building: this };
+    shadows?.addShadowCaster(this.mesh);
 
     this.applyVisual();
   }
@@ -73,5 +77,6 @@ export class Building {
     this.complete = true;
     this.applyVisual();
     this.type.apply(this.resources);
+    sfx.play(this.type.goal ? "win" : "complete");
   }
 }

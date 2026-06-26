@@ -8,6 +8,8 @@ import {
   Vector3,
   PointerEventTypes,
 } from "@babylonjs/core";
+import type { ShadowGenerator } from "@babylonjs/core";
+import { sfx } from "../audio/Sfx";
 import {
   BUILDING_TYPES,
   BuildingType,
@@ -35,7 +37,8 @@ export class PlacementController {
     private resources: Resources,
     private workers: Worker[],
     private selection: SelectionController,
-    private onPlaced: (b: Building) => void
+    private onPlaced: (b: Building) => void,
+    private shadows?: ShadowGenerator
   ) {
     this.ghostMat = new StandardMaterial("ghostMat", scene);
     this.ghostMat.alpha = 0.5;
@@ -108,12 +111,22 @@ export class PlacementController {
 
   private tryPlace(): void {
     if (!this.current || !this.ghost) return;
-    if (!canAfford(this.resources, this.current.cost)) return; // stay in placement
+    if (!canAfford(this.resources, this.current.cost)) {
+      sfx.play("deny");
+      return; // stay in placement
+    }
 
     const pos = this.ghost.position.clone();
     spend(this.resources, this.current.cost);
-    const building = new Building(this.scene, this.current, pos, this.resources);
+    const building = new Building(
+      this.scene,
+      this.current,
+      pos,
+      this.resources,
+      this.shadows
+    );
     this.onPlaced(building);
+    sfx.play("place");
 
     // Dispatch the selected worker, or the nearest one, to build it.
     const builder = this.selection.selected ?? this.nearestWorker(pos);

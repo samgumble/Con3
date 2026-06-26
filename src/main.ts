@@ -2,11 +2,14 @@ import {
   Engine,
   Scene,
   Color4,
+  Color3,
   Vector3,
   HemisphericLight,
   DirectionalLight,
   HighlightLayer,
+  ShadowGenerator,
 } from "@babylonjs/core";
+import { sfx } from "./audio/Sfx";
 import { RtsCamera } from "./systems/RtsCamera";
 import { SelectionController } from "./systems/SelectionController";
 import { buildEnvironment } from "./environment";
@@ -25,18 +28,26 @@ const scene = new Scene(engine);
 scene.clearColor = new Color4(0.53, 0.62, 0.72, 1); // sky
 
 const hemi = new HemisphericLight("hemi", new Vector3(0.4, 1, 0.2), scene);
-hemi.intensity = 0.8;
+hemi.intensity = 0.55;
+hemi.groundColor = new Color3(0.3, 0.25, 0.2);
 const sun = new DirectionalLight("sun", new Vector3(-0.5, -1, -0.3), scene);
-sun.intensity = 0.6;
+sun.position = new Vector3(25, 45, 15);
+sun.intensity = 1.0;
+
+const shadows = new ShadowGenerator(1024, sun);
+shadows.useBlurExponentialShadowMap = true;
+shadows.blurKernel = 16;
 
 const rts = new RtsCamera(scene, canvas);
-const env = buildEnvironment(scene);
+const env = buildEnvironment(scene, shadows);
 
 const resources = new Resources();
 
 const workers: Worker[] = [];
 for (let i = 0; i < 3; i++) {
-  workers.push(new Worker(scene, new Vector3(-4 + i * 1.5, 0.7, 4), resources));
+  workers.push(
+    new Worker(scene, new Vector3(-4 + i * 1.5, 0.7, 4), resources, shadows)
+  );
 }
 resources.labor = workers.length;
 
@@ -51,7 +62,8 @@ const placement = new PlacementController(
   resources,
   workers,
   selection,
-  (b) => buildings.push(b)
+  (b) => buildings.push(b),
+  shadows
 );
 selection.placement = placement;
 
@@ -59,8 +71,17 @@ const training = new TrainingController(
   scene,
   resources,
   workers,
-  new Vector3(3, 0.7, 5) // spawn point in front of the Site Office
+  new Vector3(3, 0.7, 5), // spawn point in front of the Site Office
+  shadows
 );
+
+// Start screen: the Play button is the user gesture that unlocks audio.
+const startBtn = document.getElementById("startbtn");
+startBtn?.addEventListener("click", () => {
+  sfx.unlock();
+  const screen = document.getElementById("startscreen");
+  if (screen) screen.style.display = "none";
+});
 
 let won = false;
 function checkWin(): void {
@@ -104,7 +125,7 @@ window.addEventListener("resize", () => engine.resize());
   testBuild: (id: string, x: number, z: number) => {
     const t = BUILDING_TYPES.find((b) => b.id === id);
     if (!t) return "unknown type";
-    const b = new Building(scene, t, new Vector3(x, 0, z), resources);
+    const b = new Building(scene, t, new Vector3(x, 0, z), resources, shadows);
     buildings.push(b);
     workers[0]?.assignBuild(b);
     return `placed ${id}`;

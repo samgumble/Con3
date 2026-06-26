@@ -8,6 +8,7 @@ import {
 } from "@babylonjs/core";
 import { Resources } from "../game/Resources";
 import type { Building } from "../buildings/Building";
+import type { ShadowGenerator } from "@babylonjs/core";
 
 type GatherPhase = "toNode" | "harvest" | "toDrop";
 
@@ -41,7 +42,8 @@ export class Worker {
   constructor(
     scene: Scene,
     position: Vector3,
-    private resources: Resources
+    private resources: Resources,
+    shadows?: ShadowGenerator
   ) {
     this.mesh = MeshBuilder.CreateCapsule(
       "worker",
@@ -55,6 +57,14 @@ export class Worker {
     this.mesh.material = mat;
     this.mesh.metadata = { worker: this };
 
+    // Hard hat.
+    const hat = MeshBuilder.CreateCylinder("hat", { diameter: 0.62, height: 0.22 }, scene);
+    hat.parent = this.mesh;
+    hat.position.set(0, 0.85, 0);
+    const hatMat = new StandardMaterial("hatMat", scene);
+    hatMat.diffuseColor = new Color3(1, 0.78, 0.1);
+    hat.material = hatMat;
+
     this.carryIndicator = MeshBuilder.CreateBox("cargo", { size: 0.4 }, scene);
     this.carryIndicator.parent = this.mesh;
     this.carryIndicator.position.set(0, 1.1, 0);
@@ -62,6 +72,8 @@ export class Worker {
     cargoMat.diffuseColor = new Color3(0.6, 0.6, 0.6);
     this.carryIndicator.material = cargoMat;
     this.carryIndicator.setEnabled(false);
+
+    shadows?.addShadowCaster(this.mesh, true); // include hat/cargo children
   }
 
   private clearTasks(): void {

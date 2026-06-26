@@ -57,10 +57,37 @@
         background: #ffe27a; color: #1a2230; border: none;
         padding: 8px 18px; border-radius: 6px;
       }
+      #startscreen {
+        position: fixed; inset: 0; display: flex; z-index: 20;
+        flex-direction: column; align-items: center; justify-content: center;
+        background: linear-gradient(160deg, #1a2230, #2c3a4f);
+        font-family: system-ui, sans-serif; color: #fff; text-align: center;
+      }
+      #startscreen h1 {
+        margin: 0; font-size: 64px; letter-spacing: 4px; color: #ffe27a;
+        text-shadow: 0 4px 18px rgba(0,0,0,0.5);
+      }
+      #startscreen .tag { margin: 6px 0 22px; font-size: 18px; opacity: 0.85; }
+      #startscreen .goal { max-width: 440px; margin: 0 0 26px; opacity: 0.7; line-height: 1.5; }
+      #startbtn {
+        cursor: pointer; font: bold 18px system-ui, sans-serif;
+        background: #ffe27a; color: #1a2230; border: none;
+        padding: 12px 34px; border-radius: 8px;
+      }
+      #startbtn:hover { background: #fff0ad; }
     </style>
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="startscreen">
+      <h1>CON3</h1>
+      <div class="tag">Construction RTS</div>
+      <p class="goal">
+        Gather materials, train your crew, and build out your site.
+        First to complete the <b>HQ Tower</b> wins.
+      </p>
+      <button id="startbtn">Build Site &#9654;</button>
+    </div>
     <div id="resources"></div>
     <div id="buildmenu"></div>
     <div id="trainmenu"></div>
