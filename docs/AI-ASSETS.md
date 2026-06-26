@@ -11,9 +11,25 @@ Tools for generating game art, models, audio, and how they flow into Unity.
 | **Luma Genie** | text → 3D | Strong shapes |
 | **Rodin (Hyper3D)** | image → 3D | Clean topology |
 
-**Workflow:** generate → export **glTF/FBX** → drag into `Assets/Art/Models/` →
-Unity imports automatically (binary files go to Git LFS via `.gitattributes`).
-Expect to clean up scale, pivot point, and sometimes topology in Blender.
+**Workflow (wired up):** generate → export **glTF/GLB** → drop the file in
+`public/models/` → load it with `loadModel()`:
+
+```ts
+import { loadModel } from "./assets/loadModel";
+
+loadModel(scene, "my_building.glb", {
+  position: new Vector3(-12, 0, -7),
+  scale: 1.6,
+  shadows,
+});
+```
+
+Babylon auto-detects the format by extension (`.glb` / `.gltf` / `.obj` all work),
+wraps the meshes in a TransformNode, and registers them as shadow casters. See
+`src/assets/loadModel.ts` and the `sample_depot.obj` placeholder for a working
+example. To replace a primitive (e.g. the Site Office box) with a real model,
+swap the filename and remove the corresponding `MeshBuilder` call.
+Expect to tweak scale/pivot; large binaries go to Git LFS via `.gitattributes`.
 
 ## 2D art (UI icons, textures, concept art)
 

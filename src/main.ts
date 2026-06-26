@@ -10,6 +10,7 @@ import {
   ShadowGenerator,
 } from "@babylonjs/core";
 import { sfx } from "./audio/Sfx";
+import { loadModel } from "./assets/loadModel";
 import { RtsCamera } from "./systems/RtsCamera";
 import { SelectionController } from "./systems/SelectionController";
 import { buildEnvironment } from "./environment";
@@ -37,6 +38,8 @@ sun.intensity = 1.0;
 const shadows = new ShadowGenerator(1024, sun);
 shadows.useBlurExponentialShadowMap = true;
 shadows.blurKernel = 16;
+shadows.bias = 0.01; // reduce shadow acne
+shadows.normalBias = 0.02;
 
 const rts = new RtsCamera(scene, canvas);
 const env = buildEnvironment(scene, shadows);
@@ -74,6 +77,14 @@ const training = new TrainingController(
   new Vector3(3, 0.7, 5), // spawn point in front of the Site Office
   shadows
 );
+
+// Demo of the model-loading pipeline: place a loaded model on the site.
+// Swap "sample_depot.obj" for a real AI-generated .glb to use it instead.
+loadModel(scene, "sample_depot.obj", {
+  position: new Vector3(-12, 0, -7),
+  scale: 1.6,
+  shadows,
+}).catch((e) => console.error("model load failed:", e));
 
 // Start screen: the Play button is the user gesture that unlocks audio.
 const startBtn = document.getElementById("startbtn");
