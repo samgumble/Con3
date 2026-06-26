@@ -59,21 +59,29 @@ export class Worker {
     this.mesh.position.copyFrom(position);
 
     const mat = new StandardMaterial("workerMat", scene);
-    mat.diffuseColor = new Color3(0.2, 0.5, 0.9);
+    mat.diffuseColor = new Color3(0.95, 0.45, 0.1); // hi-vis vest
     this.mesh.material = mat;
     this.mesh.metadata = { worker: this };
 
+    // Head.
+    const head = MeshBuilder.CreateSphere("head", { diameter: 0.5 }, scene);
+    head.parent = this.mesh;
+    head.position.set(0, 0.8, 0);
+    const headMat = new StandardMaterial("headMat", scene);
+    headMat.diffuseColor = new Color3(0.9, 0.75, 0.62);
+    head.material = headMat;
+
     // Hard hat.
-    const hat = MeshBuilder.CreateCylinder("hat", { diameter: 0.62, height: 0.22 }, scene);
+    const hat = MeshBuilder.CreateCylinder("hat", { diameter: 0.56, height: 0.2 }, scene);
     hat.parent = this.mesh;
-    hat.position.set(0, 0.85, 0);
+    hat.position.set(0, 1.0, 0);
     const hatMat = new StandardMaterial("hatMat", scene);
-    hatMat.diffuseColor = new Color3(1, 0.78, 0.1);
+    hatMat.diffuseColor = new Color3(1, 0.8, 0.1);
     hat.material = hatMat;
 
     this.carryIndicator = MeshBuilder.CreateBox("cargo", { size: 0.4 }, scene);
     this.carryIndicator.parent = this.mesh;
-    this.carryIndicator.position.set(0, 1.1, 0);
+    this.carryIndicator.position.set(0, 0.45, 0.5); // carried in front of the chest
     const cargoMat = new StandardMaterial("cargoMat", scene);
     cargoMat.diffuseColor = new Color3(0.6, 0.6, 0.6);
     this.carryIndicator.material = cargoMat;

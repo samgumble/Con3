@@ -3,6 +3,14 @@ import { Resources } from "../game/Resources";
 
 export type Cost = Partial<Record<"funding" | "materials", number>>;
 
+/** Optional 3D model that replaces the procedural box when a building completes. */
+export interface ModelRef {
+  file: string; // file in public/models (.glb / .gltf / .obj)
+  scale?: number;
+  rotationY?: number;
+  yOffset?: number;
+}
+
 export interface BuildingType {
   id: string;
   name: string;
@@ -17,6 +25,8 @@ export interface BuildingType {
   goal?: boolean;
   /** Optional multi-phase construction (used by the HQ Tower). */
   phases?: { name: string; buildTime: number; materials?: number }[];
+  /** Optional finished model; shown in place of the box once built. */
+  model?: ModelRef;
 }
 
 export const BUILDING_TYPES: BuildingType[] = [
@@ -31,6 +41,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     apply: (r) => {
       r.laborCap += 5;
     },
+    // To use an AI-generated model, drop a file in public/models/ and uncomment:
+    // model: { file: "trailer.glb", scale: 1, yOffset: 0 },
   },
   {
     id: "generator",

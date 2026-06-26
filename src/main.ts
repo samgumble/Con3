@@ -151,6 +151,7 @@ window.addEventListener("resize", () => engine.resize());
   training,
   depot,
   delivery,
+  buildingTypes: BUILDING_TYPES,
   checkWin,
   isWon: () => won,
   moveWorker: (i: number, x: number, z: number) =>

@@ -30,6 +30,17 @@ export class Depot {
     this.mesh.material = mat;
     this.mesh.metadata = { depot: this };
 
+    // Back wall so it reads as a loading dock (on the far side from the office).
+    const wall = MeshBuilder.CreateBox(
+      "depotWall",
+      { width: 6, depth: 0.3, height: 1.6 },
+      scene
+    );
+    wall.position.set(position.x, 1.0, position.z + 1.85);
+    wall.material = mat;
+    wall.isPickable = false;
+    shadows?.addShadowCaster(wall);
+
     const crateMat = new StandardMaterial("crateMat", scene);
     crateMat.diffuseColor = new Color3(0.55, 0.4, 0.2);
 

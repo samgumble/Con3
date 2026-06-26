@@ -89,14 +89,52 @@ export function buildEnvironment(
   doorMat.diffuseColor = new Color3(0.2, 0.15, 0.1);
   door.material = doorMat;
 
-  const pile = MeshBuilder.CreateBox("materials", { size: 1.5 }, scene);
-  pile.position.set(10, 0.75, -8);
+  const windows = MeshBuilder.CreateBox(
+    "officeWindows",
+    { width: 4.1, depth: 4.1, height: 0.8 },
+    scene
+  );
+  windows.parent = office;
+  windows.position.set(0, 0.2, 0);
+  const winMat = new StandardMaterial("winMat", scene);
+  winMat.diffuseColor = new Color3(0.2, 0.35, 0.5);
+  winMat.emissiveColor = new Color3(0.05, 0.1, 0.16);
+  windows.material = winMat;
+
+  const sign = MeshBuilder.CreateBox(
+    "officeSign",
+    { width: 2.4, height: 0.7, depth: 0.15 },
+    scene
+  );
+  sign.parent = office;
+  sign.position.set(0, 2.3, 2.05);
+  const signMat = new StandardMaterial("signMat", scene);
+  signMat.diffuseColor = new Color3(0.9, 0.92, 0.95);
+  sign.material = signMat;
+
+  // Material pile: a pickable core box plus a decorative heap of rubble.
   const pileMat = new StandardMaterial("pileMat", scene);
-  pileMat.diffuseColor = new Color3(0.5, 0.5, 0.5);
+  pileMat.diffuseColor = new Color3(0.5, 0.48, 0.45);
+  const pile = MeshBuilder.CreateBox("materials", { size: 1.6 }, scene);
+  pile.position.set(10, 0.8, -8);
   pile.material = pileMat;
 
+  const chunks: [number, number, number][] = [
+    [-1.1, -0.6, 0.8],
+    [1.0, 0.3, 1.1],
+    [0.2, 1.0, 0.7],
+    [-0.8, 0.8, 0.9],
+  ];
+  for (const [dx, dz, s] of chunks) {
+    const c = MeshBuilder.CreateBox("rubble", { size: s }, scene);
+    c.position.set(10 + dx, s / 2, -8 + dz);
+    c.material = pileMat;
+    c.isPickable = false;
+    shadows?.addShadowCaster(c);
+  }
+
   if (shadows) {
-    shadows.addShadowCaster(office, true); // include roof/door children
+    shadows.addShadowCaster(office, true); // include roof/door/windows/sign children
     shadows.addShadowCaster(pile);
   }
 
