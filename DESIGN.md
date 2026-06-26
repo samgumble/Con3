@@ -2,8 +2,8 @@
 
 A Warcraft 3-style real-time strategy game with a **construction / site-development**
 theme. Instead of armies, you command a **construction crew** that gathers resources
-and builds out a full campus/site. Built in **Unity (3D)**, hosted on GitHub, with
-online multiplayer as a later milestone.
+and builds out a full campus/site. **Web-native** (TypeScript + Babylon.js), hosted on
+GitHub Pages, with online multiplayer as a later milestone.
 
 ## Core loop
 
@@ -48,23 +48,23 @@ against the clock), then add online PvP.
 ## Milestones
 
 - **M0 — Foundation (this repo):** git + LFS + .gitignore + docs. ✅ in progress
-- **M1 — Walking worker:** Unity 3D scene, camera (RTS pan/zoom), select a worker, right-click to move (NavMesh).
+- **M1 — Walking worker:** Babylon.js scene, RTS camera (pan/zoom), select a worker, right-click to move.
 - **M2 — Gather & drop-off:** worker harvests Materials, returns to Site Office, counts tick up in a HUD.
 - **M3 — Build:** spend resources to place + construct a building over time.
 - **M4 — Economy loop:** Labor cap, train workers, multiple building types, win condition.
 - **M5 — AI opponent:** a basic bot that gathers and builds.
-- **M6 — Multiplayer:** Mirror networking, deterministic-ish command sync, 1v1 online.
-- **M7 — Polish & assets:** AI-generated models/textures/SFX, UI pass, WebGL demo.
+- **M6 — Multiplayer:** authoritative server with command sync, 1v1 online.
+- **M7 — Polish & assets:** AI-generated models/textures/SFX, UI pass.
 
 ## Tech stack
 
-- **Engine:** Unity 6 LTS (3D, URP render pipeline).
-- **Pathfinding:** Unity NavMesh for MVP; consider *A\* Pathfinding Project* if unit
+- **Engine:** [Babylon.js](https://www.babylonjs.com/) (TypeScript), bundled with **Vite**.
+- **Pathfinding:** simple grid + A\* for MVP; Babylon's navigation/crowd plugin if unit
   counts get high.
-- **Networking (M6):** [Mirror](https://mirror-networking.com/) — free, mature, great
-  for RTS-style command sync. Needs a small relay/host (Fly.io / Render free tier) or
-  Steam/relay transport.
-- **Delivery:** native macOS/Windows builds via GitHub Releases; optional WebGL demo
-  on GitHub Pages.
+- **Networking (M6):** [Colyseus](https://colyseus.io/) — authoritative game server in
+  Node/TypeScript, great for room-based RTS command sync. Runs on a free-tier host
+  (Fly.io / Render). WebRTC is an alternative for peer-to-peer.
+- **Delivery:** static build deployed to **GitHub Pages**; the Colyseus server (M6+)
+  runs on a small free-tier host.
 
 See [docs/AI-ASSETS.md](docs/AI-ASSETS.md) for the AI art/model/audio pipeline.

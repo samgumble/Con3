@@ -2,46 +2,47 @@
 
 A Warcraft 3-style real-time strategy game with a **construction / site-development**
 theme. Gather resources (funding, materials, labor) and build out a full campus/site.
-Built in **Unity (3D)**, designed to be hosted on GitHub and played online.
+**Web-native** (TypeScript + Babylon.js + Vite) — runs in the browser, hosted on
+GitHub Pages, designed for online play.
 
-> **Status:** M0 — project foundation. See [DESIGN.md](DESIGN.md) for the full plan
-> and [docs/AI-ASSETS.md](docs/AI-ASSETS.md) for the AI art/model pipeline.
+> **Status:** M1 in progress — runnable Babylon.js scene with an RTS camera, a site
+> office, workers, and a material pile. See [DESIGN.md](DESIGN.md) for the roadmap and
+> [docs/AI-ASSETS.md](docs/AI-ASSETS.md) for the AI art/model pipeline.
 
-## Getting started (one-time setup)
+## Getting started
 
-You need Unity before you can open or run the game.
+Requires [Node.js](https://nodejs.org/) (LTS).
 
-### 1. Install Unity
+```bash
+npm install      # install dependencies
+npm run dev      # start the Vite dev server at http://localhost:5173
+```
 
-1. Download **Unity Hub**: https://unity.com/download
-2. Open Unity Hub → sign in (free Unity account) → **Installs → Install Editor**.
-3. Choose the latest **Unity 6 LTS** (6000.x) release. During install, include the
-   **macOS Build Support** module (and **WebGL Build Support** if you want browser demos).
-4. The free **Unity Personal** license is fine (no cost under $200K/year revenue).
+Then open http://localhost:5173. The scene hot-reloads as you edit `src/`.
 
-### 2. Create the Unity project in this folder
+Other scripts:
 
-> The repo already has git, Git LFS, `.gitignore`, and `.gitattributes` configured.
-> When you create the Unity project here, Unity fills in `Assets/`, `ProjectSettings/`,
-> and `Packages/` and our git config will track the right files.
+```bash
+npm run build    # type-check + production build into dist/
+npm run preview  # preview the production build locally
+```
 
-1. In Unity Hub → **Projects → New project**.
-2. Pick the **3D (URP)** template.
-3. Set **Location** to this folder's parent and **Project name** so the path lands at
-   `Con3/` *(or create it elsewhere and we'll merge — just tell me which)*.
-4. Create. First open takes a few minutes while Unity generates the Library.
+## Project layout
 
-### 3. Verify Git LFS
-
-Already initialized for you (`git lfs install` was run). Binary art (`.png`, `.fbx`,
-`.wav`, etc.) is tracked via LFS automatically — see `.gitattributes`.
+```
+index.html         # canvas + entry
+src/main.ts        # Babylon.js scene (camera, lights, site office, workers)
+vite.config.ts     # dev server (port 5173) + build config
+.claude/launch.json # dev-server config for the Claude launch panel
+```
 
 ## Tech stack
 
-- **Engine:** Unity 6 LTS — 3D, URP
-- **Pathfinding:** Unity NavMesh (MVP)
-- **Networking:** [Mirror](https://mirror-networking.com/) (later milestone)
-- **Delivery:** native builds via GitHub Releases; optional WebGL demo on GitHub Pages
+- **Engine:** [Babylon.js](https://www.babylonjs.com/) (TypeScript)
+- **Bundler/dev server:** [Vite](https://vitejs.dev/)
+- **Pathfinding:** grid + A\* (MVP)
+- **Networking:** [Colyseus](https://colyseus.io/) authoritative server (later milestone)
+- **Delivery:** static build on **GitHub Pages**
 
 ## Roadmap
 

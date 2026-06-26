@@ -2,49 +2,31 @@
 * text=auto
 
 # Source & config: always text
-*.cs        text diff=csharp
-*.shader    text
-*.cginc     text
-*.hlsl      text
-*.json      text
-*.md        text
-*.txt       text
-*.xml       text
-*.yml       text
-*.yaml      text
-
-# Unity YAML assets: keep as text so Unity's SmartMerge (UnityYAMLMerge) can merge them
-*.meta            text merge=unityyamlmerge eol=lf
-*.unity           text merge=unityyamlmerge eol=lf
-*.prefab          text merge=unityyamlmerge eol=lf
-*.asset           text merge=unityyamlmerge eol=lf
-*.mat             text merge=unityyamlmerge eol=lf
-*.anim            text merge=unityyamlmerge eol=lf
-*.controller      text merge=unityyamlmerge eol=lf
-*.physicMaterial  text merge=unityyamlmerge eol=lf
+*.ts    text
+*.tsx   text
+*.js    text
+*.json  text
+*.html  text
+*.css   text
+*.md    text
 
 # Binary art & media -> Git LFS
 *.png   filter=lfs diff=lfs merge=lfs -text
 *.jpg   filter=lfs diff=lfs merge=lfs -text
 *.jpeg  filter=lfs diff=lfs merge=lfs -text
+*.webp  filter=lfs diff=lfs merge=lfs -text
 *.tga   filter=lfs diff=lfs merge=lfs -text
 *.psd   filter=lfs diff=lfs merge=lfs -text
-*.tif   filter=lfs diff=lfs merge=lfs -text
 *.exr   filter=lfs diff=lfs merge=lfs -text
 *.hdr   filter=lfs diff=lfs merge=lfs -text
 
 # 3D models -> Git LFS
-*.fbx   filter=lfs diff=lfs merge=lfs -text
-*.obj   filter=lfs diff=lfs merge=lfs -text
 *.glb   filter=lfs diff=lfs merge=lfs -text
 *.gltf  filter=lfs diff=lfs merge=lfs -text
-*.blend filter=lfs diff=lfs merge=lfs -text
+*.fbx   filter=lfs diff=lfs merge=lfs -text
+*.obj   filter=lfs diff=lfs merge=lfs -text
 
 # Audio -> Git LFS
 *.wav   filter=lfs diff=lfs merge=lfs -text
 *.mp3   filter=lfs diff=lfs merge=lfs -text
 *.ogg   filter=lfs diff=lfs merge=lfs -text
-
-# Other large binaries -> Git LFS
-*.dll   filter=lfs diff=lfs merge=lfs -text
-*.unitypackage filter=lfs diff=lfs merge=lfs -text
