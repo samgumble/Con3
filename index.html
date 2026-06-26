@@ -15,8 +15,7 @@
       }
       #hud b { color: #ffe27a; }
       #resources {
-        position: fixed; top: 12px; left: 12px;
-        white-space: nowrap;
+        position: fixed; top: 12px; left: 12px; max-width: 60%;
         font: 14px/1.5 system-ui, sans-serif; color: #fff;
         background: rgba(0, 0, 0, 0.55); padding: 8px 14px; border-radius: 6px;
         pointer-events: none; user-select: none;
@@ -107,7 +106,7 @@
       </div>
     </div>
     <div id="hud">
-      <div><b>Left-click</b> select worker &nbsp; <b>Right-click</b> pile/depot to haul, ground to move, site to build</div>
+      <div><b>Left-click</b> select worker &nbsp; <b>Right-click</b> pile to gather, HQ to supply, ground to move, site to build</div>
       <div><b>WASD / arrows / screen edge</b> pan &nbsp; <b>Wheel</b> zoom</div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -8,6 +8,12 @@ export class Resources {
   laborCap = 6;
   fundingPerSecond = 4; // base income from the Site Office
 
+  // Construction supplies stocked at the depot (delivered by trucks).
+  steel = 0;
+  concrete = 0;
+  steelCap = 20;
+  concreteCap = 20;
+
   get(type: ResourceType): number {
     return this[type];
   }

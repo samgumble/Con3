@@ -7,6 +7,7 @@ import {
 import { Worker } from "../units/Worker";
 import { Environment } from "../environment";
 import { Constructable } from "../buildings/Constructable";
+import { HqTower } from "../buildings/HqTower";
 import { Depot } from "../buildings/Depot";
 import { sfx } from "../audio/Sfx";
 
@@ -56,7 +57,8 @@ export class SelectionController {
   private handleCommand(): void {
     if (!this.selected) return;
 
-    // Did we right-click an unfinished building? -> help construct it.
+    // Did we right-click an unfinished building? The HQ takes supply crews
+    // (depot -> install); everything else is built in place.
     const buildPick = this.scene.pick(
       this.scene.pointerX,
       this.scene.pointerY,
@@ -66,22 +68,11 @@ export class SelectionController {
       | Constructable
       | undefined;
     if (building && !building.isComplete) {
-      this.selected.assignBuild(building);
-      return;
-    }
-
-    // Did we right-click the depot? -> haul supplies to the office.
-    const depotPick = this.scene.pick(
-      this.scene.pointerX,
-      this.scene.pointerY,
-      (m) => !!m.metadata?.depot
-    );
-    if (depotPick?.hit) {
-      this.selected.assignHaul(
-        this.depot.position,
-        () => this.depot.takeSupply(),
-        this.env.office.position
-      );
+      if (building instanceof HqTower) {
+        this.selected.assignSupply(this.depot.position, building);
+      } else {
+        this.selected.assignBuild(building);
+      }
       return;
     }
 

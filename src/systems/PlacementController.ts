@@ -19,6 +19,7 @@ import {
 import { Building } from "../buildings/Building";
 import { HqTower } from "../buildings/HqTower";
 import { Constructable } from "../buildings/Constructable";
+import { Depot } from "../buildings/Depot";
 import { Resources } from "../game/Resources";
 import { Worker } from "../units/Worker";
 import { SelectionController } from "./SelectionController";
@@ -39,6 +40,7 @@ export class PlacementController {
     private resources: Resources,
     private workers: Worker[],
     private selection: SelectionController,
+    private depot: Depot,
     private onPlaced: (b: Constructable) => void,
     private shadows?: ShadowGenerator
   ) {
@@ -128,9 +130,11 @@ export class PlacementController {
     this.onPlaced(building);
     sfx.play("place");
 
-    // Dispatch the selected worker, or the nearest one, to build it.
-    const builder = this.selection.selected ?? this.nearestWorker(pos);
-    builder?.assignBuild(building);
+    // Dispatch the selected worker, or the nearest one. The HQ takes a supply
+    // crew (depot -> install); everything else is built in place.
+    const worker = this.selection.selected ?? this.nearestWorker(pos);
+    if (building instanceof HqTower) worker?.assignSupply(this.depot.position, building);
+    else worker?.assignBuild(building);
 
     this.cancel();
   }

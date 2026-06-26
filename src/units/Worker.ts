@@ -8,6 +8,7 @@ import {
 } from "@babylonjs/core";
 import { Resources } from "../game/Resources";
 import type { Constructable } from "../buildings/Constructable";
+import type { Supplyable, BuildResource } from "../buildings/Supplyable";
 import type { ShadowGenerator } from "@babylonjs/core";
 
 type HaulPhase = "toSource" | "harvest" | "toDrop";
@@ -28,6 +29,18 @@ interface HaulTask {
 const SOURCE_STOP = 1.8; // stop this far from a resource source (pile/depot)
 const DROP_STOP = 3.0; // stop this far from the (larger) drop-off building
 const BUILD_STOP = 2.6; // stop this far from a construction site
+const LOAD_TIME = 0.5; // seconds to load a crate at the depot
+const INSTALL_TIME = 0.8; // seconds to install a unit at the HQ
+
+type SupplyPhase = "toDepot" | "load" | "toSite" | "install";
+
+interface SupplyTask {
+  depotPos: Vector3;
+  target: Supplyable;
+  phase: SupplyPhase;
+  carrying: BuildResource | null;
+  timer: number;
+}
 
 /**
  * A worker (laborer). Supports a manual move, an auto-repeating gather loop, and
@@ -42,8 +55,10 @@ export class Worker {
   private moveDest: Vector3 | null = null;
   private haul: HaulTask | null = null;
   private buildTask: { building: Constructable } | null = null;
+  private supply: SupplyTask | null = null;
   private carrying = 0;
   private carryIndicator: Mesh;
+  private cargoMat: StandardMaterial;
 
   constructor(
     scene: Scene,
@@ -82,9 +97,9 @@ export class Worker {
     this.carryIndicator = MeshBuilder.CreateBox("cargo", { size: 0.4 }, scene);
     this.carryIndicator.parent = this.mesh;
     this.carryIndicator.position.set(0, 0.45, 0.5); // carried in front of the chest
-    const cargoMat = new StandardMaterial("cargoMat", scene);
-    cargoMat.diffuseColor = new Color3(0.6, 0.6, 0.6);
-    this.carryIndicator.material = cargoMat;
+    this.cargoMat = new StandardMaterial("cargoMat", scene);
+    this.cargoMat.diffuseColor = new Color3(0.6, 0.6, 0.6);
+    this.carryIndicator.material = this.cargoMat;
     this.carryIndicator.setEnabled(false);
 
     shadows?.addShadowCaster(this.mesh, true); // include hat/cargo children
@@ -94,6 +109,7 @@ export class Worker {
     this.moveDest = null;
     this.haul = null;
     this.buildTask = null;
+    this.supply = null;
   }
 
   /** Manual move command. */
@@ -129,8 +145,19 @@ export class Worker {
     this.buildTask = { building };
   }
 
+  /** Assign this worker as a supply crew: depot -> carry -> install at the target. */
+  assignSupply(depotPos: Vector3, target: Supplyable): void {
+    this.clearTasks();
+    this.supply = { depotPos: depotPos.clone(), target, phase: "toDepot", carrying: null, timer: 0 };
+  }
+
   get isMoving(): boolean {
-    return this.moveDest !== null || this.haul !== null || this.buildTask !== null;
+    return (
+      this.moveDest !== null ||
+      this.haul !== null ||
+      this.buildTask !== null ||
+      this.supply !== null
+    );
   }
 
   update(dt: number): void {
@@ -140,6 +167,60 @@ export class Worker {
       this.updateHaul(this.haul, dt);
     } else if (this.buildTask) {
       this.updateBuild(this.buildTask.building, dt);
+    } else if (this.supply) {
+      this.updateSupply(this.supply, dt);
+    }
+  }
+
+  private updateSupply(s: SupplyTask, dt: number): void {
+    if (s.target.isComplete) {
+      this.supply = null;
+      this.setCargo(null);
+      return;
+    }
+    switch (s.phase) {
+      case "toDepot":
+        if (this.stepToward(s.depotPos, dt, SOURCE_STOP)) {
+          s.phase = "load";
+          s.timer = 0;
+        }
+        break;
+      case "load": {
+        // Carry whatever the current phase still needs and the depot has.
+        const need = s.target.needs();
+        let type: BuildResource | null = null;
+        if (need.steel > 0 && this.resources.steel > 0) type = "steel";
+        else if (need.concrete > 0 && this.resources.concrete > 0) type = "concrete";
+        if (!type) return; // nothing to carry yet — wait for a truck
+        s.timer += dt;
+        if (s.timer >= LOAD_TIME) {
+          if (type === "steel" && this.resources.steel > 0) this.resources.steel -= 1;
+          else if (type === "concrete" && this.resources.concrete > 0) this.resources.concrete -= 1;
+          else {
+            s.timer = 0;
+            return;
+          }
+          s.carrying = type;
+          this.setCargo(type);
+          s.phase = "toSite";
+        }
+        break;
+      }
+      case "toSite":
+        if (this.stepToward(s.target.position, dt, BUILD_STOP)) {
+          s.phase = "install";
+          s.timer = 0;
+        }
+        break;
+      case "install":
+        s.timer += dt;
+        if (s.timer >= INSTALL_TIME) {
+          if (s.carrying) s.target.install(s.carrying);
+          s.carrying = null;
+          this.setCargo(null);
+          s.phase = "toDepot";
+        }
+        break;
     }
   }
 
@@ -201,6 +282,20 @@ export class Worker {
 
   private setCarrying(amount: number): void {
     this.carrying = amount;
-    this.carryIndicator.setEnabled(amount > 0);
+    this.setCargo(amount > 0 ? "materials" : null);
+  }
+
+  private setCargo(kind: "materials" | "steel" | "concrete" | null): void {
+    if (!kind) {
+      this.carryIndicator.setEnabled(false);
+      return;
+    }
+    this.carryIndicator.setEnabled(true);
+    this.cargoMat.diffuseColor =
+      kind === "steel"
+        ? new Color3(0.45, 0.5, 0.6)
+        : kind === "concrete"
+          ? new Color3(0.78, 0.78, 0.74)
+          : new Color3(0.6, 0.6, 0.6);
   }
 }

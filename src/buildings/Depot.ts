@@ -7,80 +7,76 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import type { ShadowGenerator } from "@babylonjs/core";
+import { Resources } from "../game/Resources";
+
+const DISPLAY = 8; // max crates drawn per resource
 
 /**
- * A supply depot: trucks drop off crates here, workers haul them away.
- * Holds a stock of "supplies" (crate units) shown as a stack of crate meshes.
+ * The supply depot: trucks drop steel and concrete here (tracked on Resources),
+ * shown as two crate stacks. Supply crews pick them up and carry them to the HQ.
  */
 export class Depot {
   readonly mesh: Mesh; // platform (pickable; metadata.depot)
-  readonly capacity = 12;
-  supplies = 4;
-  private crates: Mesh[] = [];
+  private steelCrates: Mesh[] = [];
+  private concreteCrates: Mesh[] = [];
 
-  constructor(scene: Scene, position: Vector3, shadows?: ShadowGenerator) {
-    this.mesh = MeshBuilder.CreateBox(
-      "depot",
-      { width: 6, depth: 4, height: 0.4 },
-      scene
-    );
+  constructor(
+    scene: Scene,
+    position: Vector3,
+    private resources: Resources,
+    shadows?: ShadowGenerator
+  ) {
+    this.mesh = MeshBuilder.CreateBox("depot", { width: 6, depth: 4, height: 0.4 }, scene);
     this.mesh.position.set(position.x, 0.2, position.z);
     const mat = new StandardMaterial("depotMat", scene);
     mat.diffuseColor = new Color3(0.28, 0.3, 0.34);
     this.mesh.material = mat;
     this.mesh.metadata = { depot: this };
 
-    // Back wall so it reads as a loading dock (on the far side from the office).
-    const wall = MeshBuilder.CreateBox(
-      "depotWall",
-      { width: 6, depth: 0.3, height: 1.6 },
-      scene
-    );
+    const wall = MeshBuilder.CreateBox("depotWall", { width: 6, depth: 0.3, height: 1.6 }, scene);
     wall.position.set(position.x, 1.0, position.z + 1.85);
     wall.material = mat;
     wall.isPickable = false;
     shadows?.addShadowCaster(wall);
 
-    const crateMat = new StandardMaterial("crateMat", scene);
-    crateMat.diffuseColor = new Color3(0.55, 0.4, 0.2);
+    const steelMat = new StandardMaterial("steelCrate", scene);
+    steelMat.diffuseColor = new Color3(0.45, 0.5, 0.6); // blue-grey steel
+    const concreteMat = new StandardMaterial("concreteCrate", scene);
+    concreteMat.diffuseColor = new Color3(0.75, 0.75, 0.72); // light grey concrete
 
-    const cols = [-1.5, 0, 1.5];
     const rows = [-1.2, -0.4, 0.4, 1.2];
-    for (const z of rows) {
+    const make = (cols: number[], material: StandardMaterial, into: Mesh[]) => {
       for (const x of cols) {
-        const crate = MeshBuilder.CreateBox("crate", { size: 0.9 }, scene);
-        crate.position.set(position.x + x, 0.85, position.z + z);
-        crate.material = crateMat;
-        crate.isPickable = false;
-        this.crates.push(crate);
-        shadows?.addShadowCaster(crate);
+        for (const z of rows) {
+          const c = MeshBuilder.CreateBox("crate", { size: 0.85 }, scene);
+          c.position.set(position.x + x, 0.85, position.z + z);
+          c.material = material;
+          c.isPickable = false;
+          shadows?.addShadowCaster(c);
+          into.push(c);
+        }
       }
-    }
+    };
+    make([-2.1, -0.9], steelMat, this.steelCrates); // steel: left half
+    make([0.9, 2.1], concreteMat, this.concreteCrates); // concrete: right half
 
     shadows?.addShadowCaster(this.mesh);
-    this.updateCrates();
+    this.sync();
   }
 
   get position(): Vector3 {
     return this.mesh.position;
   }
 
-  addSupply(n: number): void {
-    this.supplies = Math.min(this.capacity, this.supplies + n);
-    this.updateCrates();
+  /** Refresh crate visuals from the current stock. */
+  update(): void {
+    this.sync();
   }
 
-  /** Remove one crate; returns false if empty. */
-  takeSupply(): boolean {
-    if (this.supplies <= 0) return false;
-    this.supplies -= 1;
-    this.updateCrates();
-    return true;
-  }
-
-  private updateCrates(): void {
-    for (let i = 0; i < this.crates.length; i++) {
-      this.crates[i].setEnabled(i < this.supplies);
-    }
+  private sync(): void {
+    const s = Math.min(this.resources.steel, DISPLAY);
+    const c = Math.min(this.resources.concrete, DISPLAY);
+    for (let i = 0; i < this.steelCrates.length; i++) this.steelCrates[i].setEnabled(i < s);
+    for (let i = 0; i < this.concreteCrates.length; i++) this.concreteCrates[i].setEnabled(i < c);
   }
 }

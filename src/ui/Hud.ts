@@ -13,6 +13,8 @@ export class Hud {
     this.el.innerHTML =
       `&#128176; Funding <b>${Math.floor(r.funding)}</b>` +
       ` &nbsp;·&nbsp; &#129521; Materials <b>${r.materials}</b>` +
+      ` &nbsp;·&nbsp; &#129690; Steel <b>${r.steel}</b>` +
+      ` &nbsp;·&nbsp; &#129704; Concrete <b>${r.concrete}</b>` +
       ` &nbsp;·&nbsp; &#128119; Labor <b>${r.labor}/${r.laborCap}</b>`;
   }
 }

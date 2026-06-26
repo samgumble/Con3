@@ -23,8 +23,9 @@ export interface BuildingType {
   apply: (r: Resources) => void;
   /** If true, completing this building wins the game. */
   goal?: boolean;
-  /** Optional multi-phase construction (used by the HQ Tower). */
-  phases?: { name: string; buildTime: number; materials?: number }[];
+  /** Optional multi-phase construction (used by the HQ Tower).
+   * The HQ consumes steel/concrete installed by supply crews. */
+  phases?: { name: string; steel?: number; concrete?: number }[];
   /** Optional finished model; shown in place of the box once built. */
   model?: ModelRef;
 }
@@ -59,17 +60,17 @@ export const BUILDING_TYPES: BuildingType[] = [
   {
     id: "hq",
     name: "HQ Tower",
-    blurb: "Win — feed it materials",
-    cost: { funding: 200 }, // mobilization; materials are consumed per phase
-    buildTime: 46,
+    blurb: "Win — supply steel & concrete",
+    cost: { funding: 200 }, // mobilization; steel/concrete are installed per phase
+    buildTime: 0,
     size: { w: 5, d: 5, h: 7 },
     color: new Color3(0.9, 0.78, 0.25),
     apply: () => {},
     goal: true,
     phases: [
-      { name: "Core", buildTime: 14, materials: 170 },
-      { name: "Shell", buildTime: 16, materials: 220 },
-      { name: "Fitout", buildTime: 16, materials: 190 },
+      { name: "Core", concrete: 12 },
+      { name: "Shell", steel: 14 },
+      { name: "Fitout", steel: 6, concrete: 6 },
     ],
   },
 ];

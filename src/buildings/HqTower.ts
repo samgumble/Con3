@@ -11,26 +11,34 @@ import type { ShadowGenerator } from "@babylonjs/core";
 import { BuildingType } from "./buildingTypes";
 import { Resources } from "../game/Resources";
 import { Constructable } from "./Constructable";
+import { Supplyable, BuildResource } from "./Supplyable";
 import { sfx } from "../audio/Sfx";
 
 const GROUND_Y = 0.4; // top of the foundation pad
 const CORE_H = 7;
 const SHELL_H = 6.6;
 
+interface HqPhase {
+  name: string;
+  steel: number;
+  concrete: number;
+}
+
 /**
  * The HQ Tower — the capstone, built in visible phases:
- *   1. Core   — the structural column rises
- *   2. Shell  — the glass facade clads the core
- *   3. Fitout — crown, antenna, and final polish
- * Completing all phases wins the game.
+ *   1. Core   — concrete is poured (the structural column rises)
+ *   2. Shell  — steel clads the core (the glass facade)
+ *   3. Fitout — steel + concrete finish it (crown, antenna, polish)
+ * Supply crews fetch steel/concrete from the depot and install() them here;
+ * installing the last unit of the final phase wins the game.
  */
-export class HqTower implements Constructable {
+export class HqTower implements Constructable, Supplyable {
   readonly type: BuildingType;
-  private phases: { name: string; buildTime: number; materials?: number }[];
+  private phases: HqPhase[];
   private phaseIndex = 0;
-  private phaseProgress = 0;
+  private installedSteel = 0;
+  private installedConcrete = 0;
   private complete = false;
-  private stalled = false; // true when waiting on materials
 
   private pad: Mesh;
   private core: Mesh;
@@ -46,7 +54,14 @@ export class HqTower implements Constructable {
     shadows?: ShadowGenerator
   ) {
     this.type = type;
-    this.phases = type.phases ?? [{ name: "Build", buildTime: type.buildTime }];
+    this.phases = (type.phases ?? []).map((p) => ({
+      name: p.name,
+      steel: p.steel ?? 0,
+      concrete: p.concrete ?? 0,
+    }));
+    if (this.phases.length === 0) {
+      this.phases = [{ name: "Build", steel: 0, concrete: 0 }];
+    }
     const x = position.x;
     const z = position.z;
 
@@ -71,7 +86,6 @@ export class HqTower implements Constructable {
     this.shell.material = this.shellMat;
     this.shell.metadata = { building: this };
 
-    // Fitout: crown + antenna, scaled in during phase 3.
     this.fitout = new TransformNode("hqFitout", scene);
     this.fitout.position.set(x, GROUND_Y + SHELL_H, z);
     const crown = MeshBuilder.CreateBox("hqCrown", { width: 4.8, depth: 4.8, height: 0.6 }, scene);
@@ -102,47 +116,51 @@ export class HqTower implements Constructable {
     return this.pad.position;
   }
 
-  /** Current phase name + progress, or null once complete. */
-  get statusText(): string | null {
-    if (this.complete) return null;
-    const name = this.phases[this.phaseIndex]?.name ?? "";
-    const base = `HQ Tower — ${name} ${Math.floor(this.phaseProgress * 100)}%`;
-    return this.stalled ? `${base} · needs materials` : base;
+  /** Units still required for the current phase. */
+  needs(): { steel: number; concrete: number } {
+    if (this.complete) return { steel: 0, concrete: 0 };
+    const p = this.phases[this.phaseIndex];
+    return {
+      steel: Math.max(0, p.steel - this.installedSteel),
+      concrete: Math.max(0, p.concrete - this.installedConcrete),
+    };
   }
 
-  advance(dt: number): void {
+  /** Install one unit of a resource into the current phase. */
+  install(t: BuildResource): void {
     if (this.complete) return;
-    const phase = this.phases[this.phaseIndex];
-    let inc = dt / phase.buildTime;
+    const p = this.phases[this.phaseIndex];
+    if (t === "steel" && this.installedSteel < p.steel) this.installedSteel += 1;
+    else if (t === "concrete" && this.installedConcrete < p.concrete) this.installedConcrete += 1;
 
-    // Each phase consumes materials as it builds — stall if the pool runs dry.
-    const matCost = phase.materials ?? 0;
-    if (matCost > 0) {
-      const need = matCost * inc;
-      const have = this.resources.materials;
-      if (have <= 0) {
-        this.stalled = true;
-        this.updateVisual();
-        return;
-      }
-      this.stalled = false;
-      if (have < need) {
-        inc *= have / need; // partial progress with what's left
-        this.resources.materials = 0;
-      } else {
-        this.resources.materials -= need;
-      }
-    } else {
-      this.stalled = false;
-    }
-
-    this.phaseProgress = Math.min(1, this.phaseProgress + inc);
     this.updateVisual();
-    if (this.phaseProgress >= 1) {
+
+    if (this.installedSteel >= p.steel && this.installedConcrete >= p.concrete) {
       this.phaseIndex += 1;
-      this.phaseProgress = 0;
+      this.installedSteel = 0;
+      this.installedConcrete = 0;
       if (this.phaseIndex >= this.phases.length) this.finish();
+      else this.updateVisual();
     }
+  }
+
+  /** HQ progresses via install(), not over time — no-op for the build system. */
+  advance(_dt: number): void {}
+
+  /** Current phase + install counts, or null once complete. */
+  get statusText(): string | null {
+    if (this.complete) return null;
+    const p = this.phases[this.phaseIndex];
+    const parts: string[] = [];
+    if (p.steel > 0) parts.push(`steel ${this.installedSteel}/${p.steel}`);
+    if (p.concrete > 0) parts.push(`concrete ${this.installedConcrete}/${p.concrete}`);
+    return `HQ Tower — ${p.name}: ${parts.join(", ")}`;
+  }
+
+  private get phaseProgress(): number {
+    const p = this.phases[this.phaseIndex];
+    const req = p.steel + p.concrete;
+    return req <= 0 ? 1 : (this.installedSteel + this.installedConcrete) / req;
   }
 
   private updateVisual(): void {

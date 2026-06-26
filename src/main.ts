@@ -58,9 +58,9 @@ for (let i = 0; i < 3; i++) {
 }
 resources.labor = workers.length;
 
-// Supply chain: a depot that trucks restock and workers haul from.
-const depot = new Depot(scene, new Vector3(8, 0, 12), shadows);
-const delivery = new DeliverySystem(scene, depot, shadows);
+// Supply chain: trucks restock the depot with steel/concrete; crews carry them to the HQ.
+const depot = new Depot(scene, new Vector3(8, 0, 12), resources, shadows);
+const delivery = new DeliverySystem(scene, depot.position, resources, shadows);
 
 const highlight = new HighlightLayer("highlight", scene);
 const selection = new SelectionController(scene, workers, env, highlight, depot);
@@ -73,6 +73,7 @@ const placement = new PlacementController(
   resources,
   workers,
   selection,
+  depot,
   (b) => buildings.push(b),
   shadows
 );
@@ -131,6 +132,7 @@ engine.runRenderLoop(() => {
   for (const w of workers) w.update(dt);
   training.update(dt);
   delivery.update(dt);
+  depot.update();
   hud.update();
   updateBuildStatus();
   checkWin();
@@ -158,12 +160,10 @@ window.addEventListener("resize", () => engine.resize());
     workers[i]?.moveTo(new Vector3(x, workers[i].mesh.position.y, z)),
   gatherWorker: (i: number) =>
     workers[i]?.assignGather(env.pile.position, env.office.position),
-  haulWorker: (i: number) =>
-    workers[i]?.assignHaul(
-      depot.position,
-      () => depot.takeSupply(),
-      env.office.position
-    ),
+  supplyWorker: (i: number) => {
+    const hq = buildings.find((b) => b instanceof HqTower) as HqTower | undefined;
+    if (hq) workers[i]?.assignSupply(depot.position, hq);
+  },
   testBuild: (id: string, x: number, z: number) => {
     const t = BUILDING_TYPES.find((b) => b.id === id);
     if (!t) return "unknown type";
@@ -172,7 +172,8 @@ window.addEventListener("resize", () => engine.resize());
         ? new HqTower(scene, t, new Vector3(x, 0, z), resources, shadows)
         : new Building(scene, t, new Vector3(x, 0, z), resources, shadows);
     buildings.push(b);
-    workers[0]?.assignBuild(b);
+    if (b instanceof HqTower) workers[0]?.assignSupply(depot.position, b);
+    else workers[0]?.assignBuild(b);
     return `placed ${id}`;
   },
   pos: (i: number) => workers[i]?.mesh.position.asArray(),

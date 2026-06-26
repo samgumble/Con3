@@ -7,11 +7,12 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import type { ShadowGenerator } from "@babylonjs/core";
-import { Depot } from "../buildings/Depot";
+import { Resources } from "../game/Resources";
+import { BuildResource } from "../buildings/Supplyable";
 
 /**
- * A delivery truck: drives in from the edge to the depot, unloads supplies, then
- * drives off and despawns. Straight-line movement (open lot, no pathfinding).
+ * A delivery truck carrying steel or concrete. Drives in from the edge to the
+ * depot, unloads into the stockpile, then drives off and despawns.
  */
 export class Truck {
   readonly root: TransformNode;
@@ -26,7 +27,8 @@ export class Truck {
     start: Vector3,
     drop: Vector3,
     exit: Vector3,
-    private depot: Depot,
+    private resources: Resources,
+    private cargo: BuildResource,
     private load: number,
     shadows?: ShadowGenerator
   ) {
@@ -35,7 +37,8 @@ export class Truck {
     this.waypoints = [drop.clone(), exit.clone()];
 
     const bodyMat = new StandardMaterial("truckBody", scene);
-    bodyMat.diffuseColor = new Color3(0.8, 0.3, 0.2);
+    bodyMat.diffuseColor =
+      cargo === "steel" ? new Color3(0.35, 0.45, 0.65) : new Color3(0.7, 0.7, 0.68);
     const cabMat = new StandardMaterial("truckCab", scene);
     cabMat.diffuseColor = new Color3(0.2, 0.25, 0.3);
     const wheelMat = new StandardMaterial("truckWheel", scene);
@@ -73,10 +76,16 @@ export class Truck {
     if (!this.driveTo(target, dt)) return;
 
     if (this.wp === 0) {
-      // At the depot: pause to unload, then deposit and head for the exit.
       this.unloadTimer += dt;
       if (this.unloadTimer >= 2) {
-        this.depot.addSupply(this.load);
+        if (this.cargo === "steel") {
+          this.resources.steel = Math.min(this.resources.steelCap, this.resources.steel + this.load);
+        } else {
+          this.resources.concrete = Math.min(
+            this.resources.concreteCap,
+            this.resources.concrete + this.load
+          );
+        }
         this.wp = 1;
       }
     } else {
