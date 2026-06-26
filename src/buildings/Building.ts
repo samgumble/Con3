@@ -9,13 +9,14 @@ import {
 import type { ShadowGenerator } from "@babylonjs/core";
 import { BuildingType } from "./buildingTypes";
 import { Resources } from "../game/Resources";
+import { Constructable } from "./Constructable";
 import { sfx } from "../audio/Sfx";
 
 /**
  * A placed building. Starts as a translucent stub and grows/solidifies as a
  * worker advances its construction; applies its type effect on completion.
  */
-export class Building {
+export class Building implements Constructable {
   readonly mesh: Mesh;
   readonly type: BuildingType;
   progress = 0;

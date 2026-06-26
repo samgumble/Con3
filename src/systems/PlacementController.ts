@@ -17,6 +17,8 @@ import {
   spend,
 } from "../buildings/buildingTypes";
 import { Building } from "../buildings/Building";
+import { HqTower } from "../buildings/HqTower";
+import { Constructable } from "../buildings/Constructable";
 import { Resources } from "../game/Resources";
 import { Worker } from "../units/Worker";
 import { SelectionController } from "./SelectionController";
@@ -37,7 +39,7 @@ export class PlacementController {
     private resources: Resources,
     private workers: Worker[],
     private selection: SelectionController,
-    private onPlaced: (b: Building) => void,
+    private onPlaced: (b: Constructable) => void,
     private shadows?: ShadowGenerator
   ) {
     this.ghostMat = new StandardMaterial("ghostMat", scene);
@@ -118,13 +120,11 @@ export class PlacementController {
 
     const pos = this.ghost.position.clone();
     spend(this.resources, this.current.cost);
-    const building = new Building(
-      this.scene,
-      this.current,
-      pos,
-      this.resources,
-      this.shadows
-    );
+    // The HQ Tower builds in phases; everything else is a simple building.
+    const building: Constructable =
+      this.current.id === "hq"
+        ? new HqTower(this.scene, this.current, pos, this.resources, this.shadows)
+        : new Building(this.scene, this.current, pos, this.resources, this.shadows);
     this.onPlaced(building);
     sfx.play("place");
 

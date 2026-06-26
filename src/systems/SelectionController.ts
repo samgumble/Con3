@@ -6,7 +6,8 @@ import {
 } from "@babylonjs/core";
 import { Worker } from "../units/Worker";
 import { Environment } from "../environment";
-import { Building } from "../buildings/Building";
+import { Constructable } from "../buildings/Constructable";
+import { Depot } from "../buildings/Depot";
 import { sfx } from "../audio/Sfx";
 
 /**
@@ -24,7 +25,8 @@ export class SelectionController {
     private scene: Scene,
     private workers: Worker[],
     private env: Environment,
-    private highlight: HighlightLayer
+    private highlight: HighlightLayer,
+    private depot: Depot
   ) {
     scene
       .getEngine()
@@ -61,10 +63,25 @@ export class SelectionController {
       (m) => !!m.metadata?.building
     );
     const building = buildPick?.pickedMesh?.metadata?.building as
-      | Building
+      | Constructable
       | undefined;
     if (building && !building.isComplete) {
       this.selected.assignBuild(building);
+      return;
+    }
+
+    // Did we right-click the depot? -> haul supplies to the office.
+    const depotPick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (m) => !!m.metadata?.depot
+    );
+    if (depotPick?.hit) {
+      this.selected.assignHaul(
+        this.depot.position,
+        () => this.depot.takeSupply(),
+        this.env.office.position
+      );
       return;
     }
 

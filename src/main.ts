@@ -19,7 +19,11 @@ import { Resources } from "./game/Resources";
 import { Hud } from "./ui/Hud";
 import { PlacementController } from "./systems/PlacementController";
 import { TrainingController } from "./systems/TrainingController";
+import { DeliverySystem } from "./systems/DeliverySystem";
 import { Building } from "./buildings/Building";
+import { HqTower } from "./buildings/HqTower";
+import { Depot } from "./buildings/Depot";
+import { Constructable } from "./buildings/Constructable";
 import { BUILDING_TYPES } from "./buildings/buildingTypes";
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
@@ -54,11 +58,15 @@ for (let i = 0; i < 3; i++) {
 }
 resources.labor = workers.length;
 
+// Supply chain: a depot that trucks restock and workers haul from.
+const depot = new Depot(scene, new Vector3(8, 0, 12), shadows);
+const delivery = new DeliverySystem(scene, depot, shadows);
+
 const highlight = new HighlightLayer("highlight", scene);
-const selection = new SelectionController(scene, workers, env, highlight);
+const selection = new SelectionController(scene, workers, env, highlight, depot);
 const hud = new Hud(resources);
 
-const buildings: Building[] = [];
+const buildings: Constructable[] = [];
 const placement = new PlacementController(
   scene,
   env.ground,
@@ -104,13 +112,27 @@ function checkWin(): void {
   }
 }
 
+// Show the HQ Tower's current construction phase while it's being built.
+const buildStatusEl = document.getElementById("buildstatus");
+function updateBuildStatus(): void {
+  if (!buildStatusEl) return;
+  const hq = buildings.find(
+    (b): b is HqTower => b instanceof HqTower && !b.isComplete
+  );
+  const text = hq?.statusText ?? "";
+  buildStatusEl.textContent = text;
+  buildStatusEl.style.display = text ? "block" : "none";
+}
+
 engine.runRenderLoop(() => {
   const dt = engine.getDeltaTime() / 1000;
   resources.add("funding", resources.fundingPerSecond * dt);
   rts.update(dt);
   for (const w of workers) w.update(dt);
   training.update(dt);
+  delivery.update(dt);
   hud.update();
+  updateBuildStatus();
   checkWin();
   scene.render();
 });
@@ -127,16 +149,27 @@ window.addEventListener("resize", () => engine.resize());
   env,
   buildings,
   training,
+  depot,
+  delivery,
   checkWin,
   isWon: () => won,
   moveWorker: (i: number, x: number, z: number) =>
     workers[i]?.moveTo(new Vector3(x, workers[i].mesh.position.y, z)),
   gatherWorker: (i: number) =>
     workers[i]?.assignGather(env.pile.position, env.office.position),
+  haulWorker: (i: number) =>
+    workers[i]?.assignHaul(
+      depot.position,
+      () => depot.takeSupply(),
+      env.office.position
+    ),
   testBuild: (id: string, x: number, z: number) => {
     const t = BUILDING_TYPES.find((b) => b.id === id);
     if (!t) return "unknown type";
-    const b = new Building(scene, t, new Vector3(x, 0, z), resources, shadows);
+    const b: Constructable =
+      id === "hq"
+        ? new HqTower(scene, t, new Vector3(x, 0, z), resources, shadows)
+        : new Building(scene, t, new Vector3(x, 0, z), resources, shadows);
     buildings.push(b);
     workers[0]?.assignBuild(b);
     return `placed ${id}`;

@@ -7,19 +7,25 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { Resources } from "../game/Resources";
-import type { Building } from "../buildings/Building";
+import type { Constructable } from "../buildings/Constructable";
 import type { ShadowGenerator } from "@babylonjs/core";
 
-type GatherPhase = "toNode" | "harvest" | "toDrop";
+type HaulPhase = "toSource" | "harvest" | "toDrop";
 
-interface GatherTask {
-  nodePos: Vector3;
+interface HaulSource {
+  position: Vector3;
+  /** Try to take one unit from the source; false if it's empty. */
+  take: () => boolean;
+}
+
+interface HaulTask {
+  source: HaulSource;
   dropPos: Vector3;
-  phase: GatherPhase;
+  phase: HaulPhase;
   timer: number;
 }
 
-const NODE_STOP = 1.6; // stop this far from the resource node
+const SOURCE_STOP = 1.8; // stop this far from a resource source (pile/depot)
 const DROP_STOP = 3.0; // stop this far from the (larger) drop-off building
 const BUILD_STOP = 2.6; // stop this far from a construction site
 
@@ -34,8 +40,8 @@ export class Worker {
   carryAmount = 10; // materials carried per trip
 
   private moveDest: Vector3 | null = null;
-  private gather: GatherTask | null = null;
-  private buildTask: { building: Building } | null = null;
+  private haul: HaulTask | null = null;
+  private buildTask: { building: Constructable } | null = null;
   private carrying = 0;
   private carryIndicator: Mesh;
 
@@ -78,7 +84,7 @@ export class Worker {
 
   private clearTasks(): void {
     this.moveDest = null;
-    this.gather = null;
+    this.haul = null;
     this.buildTask = null;
   }
 
@@ -88,64 +94,77 @@ export class Worker {
     this.moveDest = new Vector3(point.x, this.mesh.position.y, point.z);
   }
 
-  /** Start (or resume) auto-gathering between a node and a drop-off. */
+  /** Auto-gather from an unlimited source (e.g. the raw material pile). */
   assignGather(nodePos: Vector3, dropPos: Vector3): void {
+    this.setHaul({ position: nodePos.clone(), take: () => true }, dropPos);
+  }
+
+  /** Auto-haul from a finite source (e.g. a depot), retrying when it's empty. */
+  assignHaul(sourcePos: Vector3, take: () => boolean, dropPos: Vector3): void {
+    this.setHaul({ position: sourcePos.clone(), take }, dropPos);
+  }
+
+  private setHaul(source: HaulSource, dropPos: Vector3): void {
     const wasCarrying = this.carrying > 0;
     this.clearTasks();
-    this.gather = {
-      nodePos: nodePos.clone(),
+    this.haul = {
+      source,
       dropPos: dropPos.clone(),
-      phase: wasCarrying ? "toDrop" : "toNode",
+      phase: wasCarrying ? "toDrop" : "toSource",
       timer: 0,
     };
   }
 
   /** Assign this worker to construct a building. */
-  assignBuild(building: Building): void {
+  assignBuild(building: Constructable): void {
     this.clearTasks();
     this.buildTask = { building };
   }
 
   get isMoving(): boolean {
-    return this.moveDest !== null || this.gather !== null || this.buildTask !== null;
+    return this.moveDest !== null || this.haul !== null || this.buildTask !== null;
   }
 
   update(dt: number): void {
     if (this.moveDest) {
       if (this.stepToward(this.moveDest, dt)) this.moveDest = null;
-    } else if (this.gather) {
-      this.updateGather(this.gather, dt);
+    } else if (this.haul) {
+      this.updateHaul(this.haul, dt);
     } else if (this.buildTask) {
       this.updateBuild(this.buildTask.building, dt);
     }
   }
 
-  private updateGather(g: GatherTask, dt: number): void {
-    switch (g.phase) {
-      case "toNode":
-        if (this.stepToward(g.nodePos, dt, NODE_STOP)) {
-          g.phase = "harvest";
-          g.timer = 0;
+  private updateHaul(h: HaulTask, dt: number): void {
+    switch (h.phase) {
+      case "toSource":
+        if (this.stepToward(h.source.position, dt, SOURCE_STOP)) {
+          h.phase = "harvest";
+          h.timer = 0;
         }
         break;
       case "harvest":
-        g.timer += dt;
-        if (g.timer >= this.harvestTime) {
-          this.setCarrying(this.carryAmount);
-          g.phase = "toDrop";
+        h.timer += dt;
+        if (h.timer >= this.harvestTime) {
+          if (h.source.take()) {
+            this.setCarrying(this.carryAmount);
+            h.phase = "toDrop";
+          } else {
+            h.timer = 0; // source empty — wait and retry (e.g. depot awaiting a truck)
+          }
         }
         break;
       case "toDrop":
-        if (this.stepToward(g.dropPos, dt, DROP_STOP)) {
+        if (this.stepToward(h.dropPos, dt, DROP_STOP)) {
           this.resources.add("materials", this.carrying);
           this.setCarrying(0);
-          g.phase = "toNode";
+          h.phase = "toSource";
         }
         break;
     }
   }
 
-  private updateBuild(building: Building, dt: number): void {
+  private updateBuild(building: Constructable, dt: number): void {
     if (building.isComplete) {
       this.buildTask = null;
       return;

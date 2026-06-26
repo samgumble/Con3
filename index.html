@@ -22,6 +22,13 @@
         pointer-events: none; user-select: none;
       }
       #resources b { color: #ffe27a; }
+      #buildstatus {
+        position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
+        display: none; white-space: nowrap;
+        font: bold 14px/1.5 system-ui, sans-serif; color: #ffe27a;
+        background: rgba(0, 0, 0, 0.55); padding: 8px 14px; border-radius: 6px;
+        pointer-events: none; user-select: none;
+      }
       #buildmenu {
         position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
         display: flex; gap: 8px;
@@ -89,6 +96,7 @@
       <button id="startbtn">Build Site &#9654;</button>
     </div>
     <div id="resources"></div>
+    <div id="buildstatus"></div>
     <div id="buildmenu"></div>
     <div id="trainmenu"></div>
     <div id="victory">
@@ -99,7 +107,7 @@
       </div>
     </div>
     <div id="hud">
-      <div><b>Left-click</b> select worker &nbsp; <b>Right-click pile</b> gather &nbsp; <b>Right-click ground</b> move</div>
+      <div><b>Left-click</b> select worker &nbsp; <b>Right-click</b> pile/depot to haul, ground to move, site to build</div>
       <div><b>WASD / arrows / screen edge</b> pan &nbsp; <b>Wheel</b> zoom</div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -15,6 +15,8 @@ export interface BuildingType {
   apply: (r: Resources) => void;
   /** If true, completing this building wins the game. */
   goal?: boolean;
+  /** Optional multi-phase construction (used by the HQ Tower). */
+  phases?: { name: string; buildTime: number }[];
 }
 
 export const BUILDING_TYPES: BuildingType[] = [
@@ -47,11 +49,16 @@ export const BUILDING_TYPES: BuildingType[] = [
     name: "HQ Tower",
     blurb: "Win the game!",
     cost: { materials: 200, funding: 300 },
-    buildTime: 18,
+    buildTime: 20,
     size: { w: 5, d: 5, h: 7 },
     color: new Color3(0.9, 0.78, 0.25),
     apply: () => {},
     goal: true,
+    phases: [
+      { name: "Core", buildTime: 6 },
+      { name: "Shell", buildTime: 7 },
+      { name: "Fitout", buildTime: 7 },
+    ],
   },
 ];
 
