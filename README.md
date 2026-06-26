@@ -1,9 +1,13 @@
 # Con3 — Construction RTS
 
+### ▶ [Play it now](https://samgumble.github.io/Con3/)
+
 A Warcraft 3-style real-time strategy game with a **construction / site-development**
 theme. Gather resources (funding, materials, labor) and build out a full campus/site.
 **Web-native** (TypeScript + Babylon.js + Vite) — runs in the browser, hosted on
 GitHub Pages, designed for online play.
+
+Pushes to `main` auto-deploy to GitHub Pages via [the Actions workflow](.github/workflows/deploy.yml).
 
 > **Status:** M4 complete — playable single-player build race. Gather materials, train
 > workers, construct buildings (Trailer, Generator), and win by building the HQ Tower.
