@@ -48,16 +48,16 @@ export const BUILDING_TYPES: BuildingType[] = [
     id: "hq",
     name: "HQ Tower",
     blurb: "Win — feed it materials",
-    cost: { funding: 150 }, // mobilization; materials are consumed per phase
-    buildTime: 20,
+    cost: { funding: 200 }, // mobilization; materials are consumed per phase
+    buildTime: 46,
     size: { w: 5, d: 5, h: 7 },
     color: new Color3(0.9, 0.78, 0.25),
     apply: () => {},
     goal: true,
     phases: [
-      { name: "Core", buildTime: 6, materials: 60 },
-      { name: "Shell", buildTime: 7, materials: 80 },
-      { name: "Fitout", buildTime: 7, materials: 60 },
+      { name: "Core", buildTime: 14, materials: 170 },
+      { name: "Shell", buildTime: 16, materials: 220 },
+      { name: "Fitout", buildTime: 16, materials: 190 },
     ],
   },
 ];

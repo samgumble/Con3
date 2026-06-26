@@ -2,11 +2,11 @@ export type ResourceType = "funding" | "materials" | "labor";
 
 /** Central store of the player's resources. */
 export class Resources {
-  funding = 200;
+  funding = 150;
   materials = 0;
   labor = 0;
-  laborCap = 5;
-  fundingPerSecond = 3; // base income from the Site Office
+  laborCap = 6;
+  fundingPerSecond = 4; // base income from the Site Office
 
   get(type: ResourceType): number {
     return this[type];
