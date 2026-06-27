@@ -11,17 +11,21 @@ import type { ShadowGenerator } from "@babylonjs/core";
 import { BuildingType } from "./buildingTypes";
 import { Resources } from "../game/Resources";
 import { Constructable } from "./Constructable";
-import { Supplyable, BuildResource } from "./Supplyable";
+import { Supplyable, BuildResource, ResourceCounts } from "./Supplyable";
 import { sfx } from "../audio/Sfx";
 
 const GROUND_Y = 0.4; // top of the foundation pad
 const CORE_H = 7;
 const SHELL_H = 6.6;
+const RESOURCES: BuildResource[] = ["steel", "concrete", "glass"];
 
 interface HqPhase {
   name: string;
-  steel: number;
-  concrete: number;
+  req: ResourceCounts;
+}
+
+function zero(): ResourceCounts {
+  return { steel: 0, concrete: 0, glass: 0 };
 }
 
 /**
@@ -36,8 +40,7 @@ export class HqTower implements Constructable, Supplyable {
   readonly type: BuildingType;
   private phases: HqPhase[];
   private phaseIndex = 0;
-  private installedSteel = 0;
-  private installedConcrete = 0;
+  private installed: ResourceCounts = zero();
   private complete = false;
 
   private pad: Mesh;
@@ -56,11 +59,10 @@ export class HqTower implements Constructable, Supplyable {
     this.type = type;
     this.phases = (type.phases ?? []).map((p) => ({
       name: p.name,
-      steel: p.steel ?? 0,
-      concrete: p.concrete ?? 0,
+      req: { steel: p.steel ?? 0, concrete: p.concrete ?? 0, glass: p.glass ?? 0 },
     }));
     if (this.phases.length === 0) {
-      this.phases = [{ name: "Build", steel: 0, concrete: 0 }];
+      this.phases = [{ name: "Build", req: zero() }];
     }
     const x = position.x;
     const z = position.z;
@@ -117,28 +119,25 @@ export class HqTower implements Constructable, Supplyable {
   }
 
   /** Units still required for the current phase. */
-  needs(): { steel: number; concrete: number } {
-    if (this.complete) return { steel: 0, concrete: 0 };
-    const p = this.phases[this.phaseIndex];
-    return {
-      steel: Math.max(0, p.steel - this.installedSteel),
-      concrete: Math.max(0, p.concrete - this.installedConcrete),
-    };
+  needs(): ResourceCounts {
+    if (this.complete) return zero();
+    const req = this.phases[this.phaseIndex].req;
+    const out = zero();
+    for (const r of RESOURCES) out[r] = Math.max(0, req[r] - this.installed[r]);
+    return out;
   }
 
   /** Install one unit of a resource into the current phase. */
   install(t: BuildResource): void {
     if (this.complete) return;
-    const p = this.phases[this.phaseIndex];
-    if (t === "steel" && this.installedSteel < p.steel) this.installedSteel += 1;
-    else if (t === "concrete" && this.installedConcrete < p.concrete) this.installedConcrete += 1;
+    const req = this.phases[this.phaseIndex].req;
+    if (this.installed[t] < req[t]) this.installed[t] += 1;
 
     this.updateVisual();
 
-    if (this.installedSteel >= p.steel && this.installedConcrete >= p.concrete) {
+    if (RESOURCES.every((r) => this.installed[r] >= req[r])) {
       this.phaseIndex += 1;
-      this.installedSteel = 0;
-      this.installedConcrete = 0;
+      this.installed = zero();
       if (this.phaseIndex >= this.phases.length) this.finish();
       else this.updateVisual();
     }
@@ -151,16 +150,21 @@ export class HqTower implements Constructable, Supplyable {
   get statusText(): string | null {
     if (this.complete) return null;
     const p = this.phases[this.phaseIndex];
-    const parts: string[] = [];
-    if (p.steel > 0) parts.push(`steel ${this.installedSteel}/${p.steel}`);
-    if (p.concrete > 0) parts.push(`concrete ${this.installedConcrete}/${p.concrete}`);
+    const parts = RESOURCES.filter((r) => p.req[r] > 0).map(
+      (r) => `${r} ${this.installed[r]}/${p.req[r]}`
+    );
     return `HQ Tower — ${p.name}: ${parts.join(", ")}`;
   }
 
   private get phaseProgress(): number {
-    const p = this.phases[this.phaseIndex];
-    const req = p.steel + p.concrete;
-    return req <= 0 ? 1 : (this.installedSteel + this.installedConcrete) / req;
+    const req = this.phases[this.phaseIndex].req;
+    let total = 0;
+    let have = 0;
+    for (const r of RESOURCES) {
+      total += req[r];
+      have += this.installed[r];
+    }
+    return total <= 0 ? 1 : have / total;
   }
 
   private updateVisual(): void {

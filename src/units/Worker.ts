@@ -188,18 +188,16 @@ export class Worker {
       case "load": {
         // Carry whatever the current phase still needs and the depot has.
         const need = s.target.needs();
-        let type: BuildResource | null = null;
-        if (need.steel > 0 && this.resources.steel > 0) type = "steel";
-        else if (need.concrete > 0 && this.resources.concrete > 0) type = "concrete";
+        const order: BuildResource[] = ["steel", "concrete", "glass"];
+        const type = order.find((r) => need[r] > 0 && this.resources[r] > 0) ?? null;
         if (!type) return; // nothing to carry yet — wait for a truck
         s.timer += dt;
         if (s.timer >= LOAD_TIME) {
-          if (type === "steel" && this.resources.steel > 0) this.resources.steel -= 1;
-          else if (type === "concrete" && this.resources.concrete > 0) this.resources.concrete -= 1;
-          else {
+          if (this.resources[type] <= 0) {
             s.timer = 0;
             return;
           }
+          this.resources[type] -= 1;
           s.carrying = type;
           this.setCargo(type);
           s.phase = "toSite";
@@ -285,7 +283,7 @@ export class Worker {
     this.setCargo(amount > 0 ? "materials" : null);
   }
 
-  private setCargo(kind: "materials" | "steel" | "concrete" | null): void {
+  private setCargo(kind: "materials" | "steel" | "concrete" | "glass" | null): void {
     if (!kind) {
       this.carryIndicator.setEnabled(false);
       return;
@@ -296,6 +294,8 @@ export class Worker {
         ? new Color3(0.45, 0.5, 0.6)
         : kind === "concrete"
           ? new Color3(0.78, 0.78, 0.74)
-          : new Color3(0.6, 0.6, 0.6);
+          : kind === "glass"
+            ? new Color3(0.6, 0.85, 0.9)
+            : new Color3(0.6, 0.6, 0.6);
   }
 }

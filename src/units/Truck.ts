@@ -38,7 +38,11 @@ export class Truck {
 
     const bodyMat = new StandardMaterial("truckBody", scene);
     bodyMat.diffuseColor =
-      cargo === "steel" ? new Color3(0.35, 0.45, 0.65) : new Color3(0.7, 0.7, 0.68);
+      cargo === "steel"
+        ? new Color3(0.35, 0.45, 0.65)
+        : cargo === "glass"
+          ? new Color3(0.55, 0.8, 0.85)
+          : new Color3(0.7, 0.7, 0.68);
     const cabMat = new StandardMaterial("truckCab", scene);
     cabMat.diffuseColor = new Color3(0.2, 0.25, 0.3);
     const wheelMat = new StandardMaterial("truckWheel", scene);
@@ -78,14 +82,7 @@ export class Truck {
     if (this.wp === 0) {
       this.unloadTimer += dt;
       if (this.unloadTimer >= 2) {
-        if (this.cargo === "steel") {
-          this.resources.steel = Math.min(this.resources.steelCap, this.resources.steel + this.load);
-        } else {
-          this.resources.concrete = Math.min(
-            this.resources.concreteCap,
-            this.resources.concrete + this.load
-          );
-        }
+        this.resources.addBuildResource(this.cargo, this.load);
         this.wp = 1;
       }
     } else {

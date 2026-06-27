@@ -11,8 +11,16 @@ export class Resources {
   // Construction supplies stocked at the depot (delivered by trucks).
   steel = 0;
   concrete = 0;
+  glass = 0;
   steelCap = 20;
   concreteCap = 20;
+  glassCap = 20;
+
+  /** Add a delivered build resource, capped at its storage limit. */
+  addBuildResource(type: "steel" | "concrete" | "glass", n: number): void {
+    const caps = { steel: this.steelCap, concrete: this.concreteCap, glass: this.glassCap };
+    this[type] = Math.min(caps[type], this[type] + n);
+  }
 
   get(type: ResourceType): number {
     return this[type];

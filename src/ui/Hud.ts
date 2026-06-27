@@ -15,6 +15,7 @@ export class Hud {
       ` &nbsp;·&nbsp; &#129521; Materials <b>${r.materials}</b>` +
       ` &nbsp;·&nbsp; &#129690; Steel <b>${r.steel}</b>` +
       ` &nbsp;·&nbsp; &#129704; Concrete <b>${r.concrete}</b>` +
+      ` &nbsp;·&nbsp; &#129695; Glass <b>${r.glass}</b>` +
       ` &nbsp;·&nbsp; &#128119; Labor <b>${r.labor}/${r.laborCap}</b>`;
   }
 }

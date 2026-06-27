@@ -13,7 +13,6 @@ export class DeliverySystem {
   private timer = 0;
   private interval = 10; // seconds between deliveries
   private loadPerTruck = 5;
-  private next: BuildResource = "concrete"; // Core needs concrete first
 
   constructor(
     private scene: Scene,
@@ -37,10 +36,20 @@ export class DeliverySystem {
     const start = new Vector3(20, 0, d.z + 1);
     const drop = new Vector3(d.x + 5, 0, d.z);
     const exit = new Vector3(20, 0, d.z - 5);
-    const cargo = this.next;
-    this.next = cargo === "steel" ? "concrete" : "steel";
     this.trucks.push(
-      new Truck(this.scene, start, drop, exit, this.resources, cargo, this.loadPerTruck, this.shadows)
+      new Truck(this.scene, start, drop, exit, this.resources, this.pickCargo(), this.loadPerTruck, this.shadows)
     );
+  }
+
+  /** Deliver whatever's currently lowest in stock (ties favor earlier phases). */
+  private pickCargo(): BuildResource {
+    const r = this.resources;
+    const stocks: [BuildResource, number][] = [
+      ["concrete", r.concrete],
+      ["steel", r.steel],
+      ["glass", r.glass],
+    ];
+    stocks.sort((a, b) => a[1] - b[1]);
+    return stocks[0][0];
   }
 }
